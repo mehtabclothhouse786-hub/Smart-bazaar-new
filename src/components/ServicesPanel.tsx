@@ -377,46 +377,34 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
         </div>
       </div>
 
-      {/* Top Navigation Bar Tabs */}
-      <div className="flex items-center justify-between border-b border-stone-200 pb-2">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setActiveTab('browse')}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'browse'
-                ? 'bg-emerald-700 text-white shadow-md'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-            }`}
-          >
-            <Wrench className="w-4 h-4" />
-            <span>सभी सेवाएं ({services.length})</span>
-          </button>
+      {/* Top Navigation Bar Tabs (Only shown in Service Provider View) */}
+      {isProviderView && (
+        <div className="flex items-center justify-between border-b border-stone-200 pb-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setActiveTab('browse')}
+              className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'browse'
+                  ? 'bg-emerald-700 text-white shadow-md'
+                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              <Wrench className="w-4 h-4" />
+              <span>सभी सेवाएं ({services.length})</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('my_bookings')}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'my_bookings'
-                ? 'bg-emerald-700 text-white shadow-md'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>मेरी बुकिंग्स ({serviceBookings.length})</span>
-          </button>
+            <button
+              onClick={() => setActiveTab('add_service')}
+              className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'add_service'
+                  ? 'bg-amber-500 text-stone-950 shadow-md'
+                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ नई सेवा जोड़ें</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('add_service')}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
-              activeTab === 'add_service'
-                ? 'bg-amber-500 text-stone-950 shadow-md'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            <span>अपनी सेवा जोड़ें (List Service)</span>
-          </button>
-
-          {isProviderView && (
             <button
               onClick={() => setActiveTab('received_leads')}
               className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
@@ -428,9 +416,9 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
               <PhoneCall className="w-4 h-4" />
               <span>कस्टमर कॉल्स / लीाड्स ({serviceBookings.length})</span>
             </button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* TAB 1: BROWSE SERVICES */}
       {activeTab === 'browse' && (
@@ -444,7 +432,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="खोजें (प्लंबर, इलेक्ट्रिशियन, डॉक्टर, एसी रिपेयर, चांदपुर)..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none shadow-xs"
+              className="w-full pl-10 pr-4 py-3 bg-white border border-stone-200 rounded-full text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none shadow-xs"
             />
           </div>
 
@@ -580,75 +568,100 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
             <div>
               <h3 className="font-extrabold text-amber-950 text-sm">मेरी हालिया सर्विस कॉल्स</h3>
               <p className="text-amber-800 text-xs mt-0.5 font-medium">
-                आपकी हर बुकिंग आपके सिस्टम में सुरक्षित है। सर्विस प्रोवाइडर से पुनः संपर्क करने के लिए कॉल करें।
+                आपकी हर बुकिंग आपके खाते में सुरक्षित है। सर्विस प्रोवाइडर से पुनः संपर्क करने के लिए कॉल करें।
               </p>
             </div>
           </div>
 
-          {serviceBookings.length === 0 ? (
-            <div className="bg-white rounded-3xl p-10 text-center border border-stone-200 my-4">
-              <Clock className="w-12 h-12 text-stone-300 mx-auto mb-3" />
-              <h3 className="font-extrabold text-stone-800 text-base mb-1">कोई बुकिंग इतिहास नहीं</h3>
-              <p className="text-stone-500 text-xs">सर्विस कैटलॉग से तकनीशियन या डॉक्टर को कॉल करें।</p>
+          {!customerUser?.isLoggedIn ? (
+            <div className="bg-white rounded-3xl p-8 text-center border border-stone-200 my-4 space-y-3">
+              <UserCheck className="w-12 h-12 text-stone-300 mx-auto" />
+              <h3 className="font-extrabold text-stone-800 text-base">अपनी सर्विस बुकिंग्स देखें</h3>
+              <p className="text-stone-500 text-xs">अपने मोबाइल नंबर और पासवर्ड से लॉगिन करें और अपनी सभी सेवाओं का रिकॉर्ड देखें!</p>
+              <button
+                onClick={() => onRequireLogin ? onRequireLogin(() => {}, 'अपनी बुकिंग्स देखने के लिए लॉगिन करें') : null}
+                className="bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:bg-emerald-800 transition-colors cursor-pointer"
+              >
+                लॉगिन करें (Login Now)
+              </button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {serviceBookings.map((bk) => (
-                <div key={bk.id} className="bg-white border border-stone-200 rounded-3xl p-4 shadow-sm space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black text-stone-900">
-                          #{bk.id}
-                        </span>
-                        <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                          {bk.status}
-                        </span>
-                        {bk.finalBillAmount && (
-                          <span className="text-[10px] font-black uppercase text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
-                            कुल बिल: ₹{bk.finalBillAmount}
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="font-extrabold text-stone-900 text-sm mt-1">{bk.serviceName}</h4>
-                      <div className="text-xs text-stone-600 font-medium">
-                        प्रोवाइडर: {bk.providerName} ({bk.providerPhone})
-                      </div>
-                      <div className="text-[11px] text-stone-400 mt-0.5">
-                        तारीख: {new Date(bk.createdAt).toLocaleString('hi-IN')}
-                      </div>
-                    </div>
+          ) : (() => {
+            const myBookings = serviceBookings.filter(b => {
+              if (!customerUser?.phone) return false;
+              const cleanCustomerPhone = customerUser.phone.replace(/\D/g, '');
+              const cleanBookingPhone = (b.customerPhone || '').replace(/\D/g, '');
+              return cleanCustomerPhone && cleanBookingPhone && (cleanBookingPhone.includes(cleanCustomerPhone) || cleanCustomerPhone.includes(cleanBookingPhone));
+            });
 
-                    <a
-                      href={`tel:+91${bk.providerPhone.replace(/[^0-9]/g, '')}`}
-                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-4 py-2 rounded-2xl flex items-center gap-1.5 shadow-xs"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>कॉल करें</span>
-                    </a>
-                  </div>
-
-                  {bk.finalBillAmount && (
-                    <div className="bg-emerald-50/90 border border-emerald-300 rounded-2xl p-3 text-xs space-y-1.5">
-                      <div className="flex items-center justify-between font-black text-emerald-950 border-b border-emerald-200 pb-1">
-                        <span className="flex items-center gap-1">
-                          <Receipt className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>सर्विस बिल रसीद (Per Call ₹100 + सामान + 10% शुल्क)</span>
-                        </span>
-                        <span className="text-emerald-800 font-extrabold text-sm">₹{bk.finalBillAmount}</span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-stone-700 font-semibold text-[11px] pt-1">
-                        <div>• कॉल/विजिट: ₹{bk.visitFee || 100}</div>
-                        <div>• सामान/पार्ट्स: ₹{bk.materialCost || 0}</div>
-                        <div>• 10% सेवा शुल्क: ₹{bk.platformFee || Math.round(((bk.visitFee || 100) + (bk.materialCost || 0)) * 0.10)}</div>
-                        <div className="font-black text-emerald-900">• कुल देय: ₹{bk.finalBillAmount}</div>
-                      </div>
-                    </div>
-                  )}
+            if (myBookings.length === 0) {
+              return (
+                <div className="bg-white rounded-3xl p-10 text-center border border-stone-200 my-4">
+                  <Clock className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                  <h3 className="font-extrabold text-stone-800 text-base mb-1">कोई बुकिंग इतिहास नहीं</h3>
+                  <p className="text-stone-500 text-xs">सर्विस कैटलॉग से तकनीशियन या डॉक्टर को कॉल या WhatsApp संदेश भेजें।</p>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {myBookings.map((bk) => (
+                  <div key={bk.id} className="bg-white border border-stone-200 rounded-3xl p-4 shadow-sm space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-black text-stone-900">
+                            #{bk.id}
+                          </span>
+                          <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                            {bk.status}
+                          </span>
+                          {bk.finalBillAmount && (
+                            <span className="text-[10px] font-black uppercase text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                              कुल बिल: ₹{bk.finalBillAmount}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-extrabold text-stone-900 text-sm mt-1">{bk.serviceName}</h4>
+                        <div className="text-xs text-stone-600 font-medium">
+                          प्रोवाइडर: {bk.providerName} ({bk.providerPhone})
+                        </div>
+                        <div className="text-[11px] text-stone-400 mt-0.5">
+                          तारीख: {new Date(bk.createdAt).toLocaleString('hi-IN')}
+                        </div>
+                      </div>
+
+                      <a
+                        href={`tel:+91${bk.providerPhone.replace(/[^0-9]/g, '')}`}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-4 py-2 rounded-2xl flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>कॉल करें</span>
+                      </a>
+                    </div>
+
+                    {bk.finalBillAmount && (
+                      <div className="bg-emerald-50/90 border border-emerald-300 rounded-2xl p-3 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between font-black text-emerald-950 border-b border-emerald-200 pb-1">
+                          <span className="flex items-center gap-1">
+                            <Receipt className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>सर्विस बिल रसीद (Per Call ₹100 + सामान + 10% शुल्क)</span>
+                          </span>
+                          <span className="text-emerald-800 font-extrabold text-sm">₹{bk.finalBillAmount}</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-stone-700 font-semibold text-[11px] pt-1">
+                          <div>• कॉल/विजिट: ₹{bk.visitFee || 100}</div>
+                          <div>• सामान/पार्ट्स: ₹{bk.materialCost || 0}</div>
+                          <div>• 10% सेवा शुल्क: ₹{bk.platformFee || Math.round(((bk.visitFee || 100) + (bk.materialCost || 0)) * 0.10)}</div>
+                          <div className="font-black text-emerald-900">• कुल देय: ₹{bk.finalBillAmount}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 

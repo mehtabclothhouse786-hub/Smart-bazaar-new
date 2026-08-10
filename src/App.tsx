@@ -23,7 +23,8 @@ import {
   seedProducts,
   seedVendors,
   seedDeliveryPartners,
-  seedServices
+  seedServices,
+  saveCustomerAccountDoc
 } from './services/db';
 import { Header } from './components/Header';
 import { CustomerView } from './components/CustomerView';
@@ -32,6 +33,7 @@ import { DeliveryView } from './components/DeliveryView';
 import { AdminView } from './components/AdminView';
 import { ServicesPanel } from './components/ServicesPanel';
 import { CustomerAuthModal } from './components/CustomerAuthModal';
+import { CustomerPanelModal } from './components/CustomerPanelModal';
 import { MadeInIndiaFooter } from './components/MadeInIndiaFooter';
 import { AlertTriangle } from 'lucide-react';
 
@@ -49,12 +51,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem('smart_bazaar_customer_user');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed.name === 'string' && parsed.name.toLowerCase().includes('naushad')) {
-          localStorage.removeItem('smart_bazaar_customer_user');
-          return null;
-        }
-        return parsed;
+        return JSON.parse(saved);
       }
       return null;
     } catch (e) {
@@ -62,23 +59,13 @@ export default function App() {
     }
   });
 
-  useEffect(() => {
-    if (customerUser?.name?.toLowerCase().includes('naushad')) {
-      setCustomerUser(null);
-      try {
-        localStorage.removeItem('smart_bazaar_customer_user');
-      } catch (e) {
-        console.error('Error removing customer user:', e);
-      }
-    }
-  }, [customerUser]);
-
   const [isCustomerAuthOpen, setIsCustomerAuthOpen] = useState<boolean>(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
   const [pendingAuthPrompt, setPendingAuthPrompt] = useState<string>('');
 
   const handleCustomerLoginSuccess = (user: CustomerUser) => {
     setCustomerUser(user);
+    saveCustomerAccountDoc(user);
     try {
       localStorage.setItem('smart_bazaar_customer_user', JSON.stringify(user));
     } catch (e) {
@@ -89,6 +76,8 @@ export default function App() {
       const action = pendingAuthAction;
       setPendingAuthAction(null);
       action();
+    } else {
+      setIsCustomerPanelOpen(true);
     }
   };
 
@@ -105,6 +94,7 @@ export default function App() {
     if (!customerUser) return;
     const updatedUser: CustomerUser = { ...customerUser, ...updates };
     setCustomerUser(updatedUser);
+    saveCustomerAccountDoc(updatedUser);
     try {
       localStorage.setItem('smart_bazaar_customer_user', JSON.stringify(updatedUser));
     } catch (e) {
@@ -134,6 +124,17 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerTab, setCustomerTab] = useState<'shop' | 'services' | 'orders'>('shop');
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCustomerPanelOpen, setIsCustomerPanelOpen] = useState(false);
+
+  const handleOpenCustomerPanel = () => {
+    if (!customerUser?.isLoggedIn) {
+      triggerCustomerLogin(() => {
+        setIsCustomerPanelOpen(true);
+      }, 'कस्टमर पैनल व ऑर्डर स्टेटस देखने के लिए लॉगिन करें।');
+    } else {
+      setIsCustomerPanelOpen(true);
+    }
+  };
 
   // Save cart to local storage
   useEffect(() => {
@@ -342,10 +343,8 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeOrdersCount={activeCustomerOrdersCount}
-        onOpenOrdersTab={() => {
-          setCurrentRole('customer');
-          setCustomerTab('orders');
-        }}
+        onOpenOrdersTab={handleOpenCustomerPanel}
+        onOpenCustomerPanel={handleOpenCustomerPanel}
         customerUser={customerUser}
         onOpenLoginModal={() => triggerCustomerLogin()}
         onCustomerLogout={handleCustomerLogout}
@@ -390,6 +389,7 @@ export default function App() {
             onOpenCart={() => setIsCartOpen(true)}
             customerUser={customerUser}
             onRequireLogin={triggerCustomerLogin}
+            onOpenCustomerPanel={handleOpenCustomerPanel}
           />
         )}
 
@@ -461,6 +461,17 @@ export default function App() {
         onClose={() => setIsCustomerAuthOpen(false)}
         onLoginSuccess={handleCustomerLoginSuccess}
         pendingActionText={pendingAuthPrompt}
+      />
+
+      {/* Customer Panel Modal (Live Orders & Profile) */}
+      <CustomerPanelModal
+        isOpen={isCustomerPanelOpen}
+        onClose={() => setIsCustomerPanelOpen(false)}
+        customerUser={customerUser}
+        orders={orders}
+        serviceBookings={serviceBookings}
+        onCustomerLogout={handleCustomerLogout}
+        onUpdateCustomerProfile={handleUpdateCustomerProfile}
       />
     </div>
   );

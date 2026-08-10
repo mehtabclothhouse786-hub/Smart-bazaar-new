@@ -11,7 +11,7 @@ import {
   query,
   where 
 } from '../firebase';
-import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking } from '../types';
+import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser } from '../types';
 
 const PRODUCTS_COL = 'products';
 const ORDERS_COL = 'orders';
@@ -19,6 +19,7 @@ const VENDORS_COL = 'vendors';
 const DELIVERY_COL = 'deliveryPartners';
 const SERVICES_COL = 'serviceProviders';
 const SERVICE_BOOKINGS_COL = 'serviceBookings';
+const CUSTOMERS_COL = 'customers';
 const ADMIN_COL = 'adminSettings';
 
 // Pricing and commission rates
@@ -707,6 +708,51 @@ export async function updateServiceBookingBill(
     }
   }
 }
+
+// --- CUSTOMER ACCOUNT MANAGEMENT ---
+
+export async function saveCustomerAccountDoc(customer: CustomerUser): Promise<void> {
+  const cleanPhone = customer.phone.replace(/\D/g, '');
+  const docId = 'cust_' + cleanPhone;
+  const cleanObj = sanitizeForFirestore({
+    ...customer,
+    id: docId,
+    phone: cleanPhone,
+    updatedAt: Date.now()
+  });
+
+  try {
+    await setDoc(doc(db, CUSTOMERS_COL, docId), cleanObj);
+  } catch (e) {
+    console.error('Error saving customer account in Firestore:', e);
+  }
+
+  // Backup in local storage
+  const allCustomers = getLocalData<Record<string, CustomerUser>>('customers_map', {});
+  allCustomers[cleanPhone] = { ...customer, id: docId, phone: cleanPhone };
+  setLocalData('customers_map', allCustomers);
+}
+
+export async function getCustomerAccountByPhoneDoc(phone: string): Promise<CustomerUser | null> {
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (!cleanPhone) return null;
+  const docId = 'cust_' + cleanPhone;
+
+  try {
+    const snap = await getDocs(query(collection(db, CUSTOMERS_COL), where('phone', '==', cleanPhone)));
+    if (!snap.empty) {
+      const data = snap.docs[0].data() as CustomerUser;
+      return { ...data, id: docId };
+    }
+  } catch (e) {
+    console.warn('Error fetching customer account from Firestore:', e);
+  }
+
+  // Fallback to local storage
+  const allCustomers = getLocalData<Record<string, CustomerUser>>('customers_map', {});
+  return allCustomers[cleanPhone] || null;
+}
+
 
 
 

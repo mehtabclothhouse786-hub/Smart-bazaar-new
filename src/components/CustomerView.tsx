@@ -21,7 +21,8 @@ import {
   MessageCircle,
   ExternalLink,
   Wrench,
-  LogIn
+  LogIn,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SMART_DELIVERY_UPI } from '../services/db';
@@ -61,6 +62,7 @@ interface CustomerViewProps {
   onOpenCart?: () => void;
   customerUser?: CustomerUser | null;
   onRequireLogin?: (actionCallback: () => void, promptText?: string) => void;
+  onOpenCustomerPanel?: () => void;
 }
 
 export const CustomerView: React.FC<CustomerViewProps> = ({
@@ -84,10 +86,12 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   onCloseCart,
   onOpenCart,
   customerUser,
-  onRequireLogin
+  onRequireLogin,
+  onOpenCustomerPanel
 }) => {
   const [customerShopView, setCustomerShopView] = useState<'list' | 'catalog'>('list');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [shopSearchQuery, setShopSearchQuery] = useState<string>('');
   
   // Checkout Modal state
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState<boolean>(false);
@@ -252,25 +256,6 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
             <Wrench className="w-4 h-4" />
             <span>🛠️ सेवाएं (Services)</span>
           </button>
-          
-          <button
-            onClick={() => onTabChange('orders')}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap relative ${
-              activeTab === 'orders'
-                ? 'bg-emerald-700 text-white shadow-md'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>मेरे ऑर्डर (My Orders)</span>
-            {orders.length > 0 && (
-              <span className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold ${
-                activeTab === 'orders' ? 'bg-white text-emerald-800' : 'bg-emerald-700 text-white'
-              }`}>
-                {orders.length}
-              </span>
-            )}
-          </button>
         </div>
 
 
@@ -307,15 +292,37 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 </div>
               </div>
 
+              {/* Shop Search Bar */}
+              <div className="relative mb-5">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                <input
+                  type="text"
+                  value={shopSearchQuery}
+                  onChange={(e) => setShopSearchQuery(e.target.value)}
+                  placeholder="खोजें (दुकान का नाम, सामान, राशन, कपड़ा)..."
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-stone-200 rounded-full text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none shadow-xs"
+                />
+              </div>
+
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
                   <span className="w-1.5 h-5 bg-emerald-600 rounded-full inline-block" />
-                  <span>उपलब्ध दुकानें ({vendors.length})</span>
+                  <span>उपलब्ध दुकानें ({vendors.filter(v => {
+                    if (!shopSearchQuery.trim()) return true;
+                    const q = shopSearchQuery.toLowerCase();
+                    const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
+                    return v.shopName.toLowerCase().includes(q) || v.address.toLowerCase().includes(q) || vProducts.some(p => p.name.toLowerCase().includes(q));
+                  }).length})</span>
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {vendors.map(v => {
+                {vendors.filter(v => {
+                  if (!shopSearchQuery.trim()) return true;
+                  const q = shopSearchQuery.toLowerCase();
+                  const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
+                  return v.shopName.toLowerCase().includes(q) || v.address.toLowerCase().includes(q) || vProducts.some(p => p.name.toLowerCase().includes(q));
+                }).map(v => {
                   const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
                   const categories = Array.from(new Set(vProducts.map(p => p.category)));
 
@@ -498,90 +505,177 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       ) : (
         /* MY LIVE ORDERS VIEW */
         <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-extrabold text-amber-950 text-sm">लाइव ऑर्डर स्टेटस एवं डिलीवरी OTP</h3>
-              <p className="text-amber-800 text-xs mt-0.5 font-medium">
-                ऑर्डर डिलीवर होते ही अपने 4-अंकों का OTP डिलीवरी पार्टनर को दें।
-              </p>
-            </div>
-          </div>
+          {(() => {
+            const myOrders = orders.filter(o => {
+              if (!customerUser) return false;
+              const cleanCustomerPhone = (customerUser.phone || '').replace(/\D/g, '').slice(-10);
+              const cleanOrderPhone = (o.customerPhone || '').replace(/\D/g, '').slice(-10);
+              const phoneMatch = Boolean(cleanCustomerPhone && cleanOrderPhone && cleanCustomerPhone === cleanOrderPhone);
+              const nameMatch = Boolean(o.customerName && customerUser.name && o.customerName.trim().toLowerCase() === customerUser.name.trim().toLowerCase());
+              return phoneMatch || nameMatch;
+            });
 
-          {orders.length === 0 ? (
-            <div className="bg-white rounded-3xl p-10 text-center border border-stone-200 my-6">
-              <ShoppingBag className="w-12 h-12 text-stone-300 mx-auto mb-3" />
-              <h3 className="font-extrabold text-stone-800 text-base mb-1">अभी तक कोई ऑर्डर नहीं</h3>
-              <p className="text-stone-500 text-xs mb-4">शॉप कैटलॉग से अपने पसंदीदा प्रोडक्ट्स जोड़कर ऑर्डर करें!</p>
-              <button
-                onClick={() => onTabChange('shop')}
-                className="bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm"
-              >
-                शॉपिंग शुरू करें
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {orders.map(order => (
-                <div key={order.id} className="bg-white border border-stone-200 rounded-3xl p-5 shadow-sm space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-extrabold text-stone-900 text-sm">
-                          Order #{order.id}
-                        </span>
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                          order.status === 'Delivered' || order.status === 'Settlement Completed'
-                            ? 'bg-emerald-100 text-emerald-800' 
-                            : 'bg-amber-100 text-amber-900'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <div className="text-xs text-stone-500 mt-0.5">
-                        मोड: {order.deliveryMode === 'platform' ? 'Smart Delivery' : 'Self Delivery (दुकान से पिकअप)'}
-                      </div>
-                    </div>
-
-                    {order.otp && order.status !== 'Delivered' && order.status !== 'Settlement Completed' && (
-                      <div className="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-2xl text-center">
-                        <span className="text-[10px] font-bold uppercase text-blue-600 block">डिलीवरी OTP</span>
-                        <span className="font-mono font-black text-lg text-blue-900 tracking-widest">{order.otp}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bg-stone-50 rounded-2xl p-3 border border-stone-200 text-xs space-y-1">
-                    {order.items.map((item, i) => (
-                      <div key={i} className="flex justify-between items-center text-stone-700 font-medium">
-                        <span>{item.quantity}x {item.product.name}</span>
-                        <span className="font-bold text-stone-900">₹{item.product.price * item.quantity}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-stone-200 pt-2 flex justify-between font-extrabold text-stone-900 text-sm mt-2">
-                      <span>कुल राशि</span>
-                      <span>₹{order.totalAmount}</span>
-                    </div>
-                  </div>
-
-                  {order.paymentScreenshot && (
-                    <div className="pt-1">
-                      <div className="text-[11px] font-bold text-stone-500 mb-1">पेमेंट स्क्रीनशॉट:</div>
-                      <img
-                        src={order.paymentScreenshot}
-                        alt="Payment Proof"
-                        className="w-24 h-24 object-cover rounded-xl border border-stone-300 shadow-xs cursor-pointer"
-                        onClick={() => {
-                          const w = window.open('');
-                          if (w) w.document.write(`<img src="${order.paymentScreenshot}" style="max-width:100%;">`);
-                        }}
-                      />
-                    </div>
-                  )}
+            if (!customerUser?.isLoggedIn) {
+              return (
+                <div className="bg-white rounded-3xl p-8 text-center border border-stone-200 my-4 space-y-3">
+                  <UserCheck className="w-12 h-12 text-stone-300 mx-auto" />
+                  <h3 className="font-extrabold text-stone-800 text-base">अपने खाते के ऑर्डर देखें</h3>
+                  <p className="text-stone-500 text-xs">अपने मोबाइल नंबर से लॉगिन करें और अपने सभी ऑर्डर का लाइव स्टेटस देखें!</p>
+                  <button
+                    onClick={() => onRequireLogin ? onRequireLogin(() => {}, 'अपने ऑर्डर देखने के लिए लॉगिन करें') : null}
+                    className="bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:bg-emerald-800 transition-colors"
+                  >
+                    लॉगिन करें (Login Now)
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            }
+
+            if (myOrders.length === 0) {
+              return (
+                <div className="bg-white rounded-3xl p-10 text-center border border-stone-200 my-6">
+                  <ShoppingBag className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                  <h3 className="font-extrabold text-stone-800 text-base mb-1">अभी तक कोई ऑर्डर नहीं</h3>
+                  <p className="text-stone-500 text-xs mb-4">शॉप कैटलॉग से अपने पसंदीदा प्रोडक्ट्स जोड़कर ऑर्डर करें!</p>
+                  <button
+                    onClick={() => onTabChange('shop')}
+                    className="bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-sm"
+                  >
+                    शॉपिंग शुरू करें
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {myOrders.map(order => {
+                  const isDelivered = order.status === 'Delivered' || order.status === 'Settlement Completed';
+                  const isCancelled = order.status === 'Cancelled';
+
+                  return (
+                    <div key={order.id} className="bg-white border border-stone-200 rounded-3xl p-5 shadow-sm space-y-4">
+                      {/* Order Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-black text-stone-900 text-sm">
+                              Order #{order.id}
+                            </span>
+                            <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                              isDelivered
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                : isCancelled
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                  : 'bg-emerald-800 text-white shadow-2xs'
+                            }`}>
+                              {order.status}
+                            </span>
+                            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                              {order.deliveryMode === 'platform' ? '🚚 स्मार्ट डिलीवरी' : '🏪 दुकान से पिकअप'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-stone-500 font-medium mt-1 flex items-center gap-2 flex-wrap">
+                            <span>तारीख: {new Date(order.createdAt || Date.now()).toLocaleString('hi-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                            {order.vendorName && <span className="text-stone-700 font-bold">• दुकान: {order.vendorName}</span>}
+                          </div>
+                        </div>
+
+                        {order.otp && !isDelivered && !isCancelled && (
+                          <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white border border-emerald-700 px-4 py-2 rounded-2xl text-center shadow-xs">
+                            <span className="text-[9px] font-black uppercase text-amber-300 block tracking-wider">डिलीवरी OTP</span>
+                            <span className="font-mono font-black text-xl text-white tracking-widest">{order.otp}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Estimated Delivery Time Banner */}
+                      {!isDelivered && !isCancelled && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex items-center justify-between gap-2 text-xs font-extrabold text-emerald-950">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-emerald-700 shrink-0" />
+                            <span>संभावित डिलीवरी: {order.deliveryMode === 'platform' ? '25-40 मिनट में आपके पते पर' : '30 मिनट में दुकान पर तैयार'}</span>
+                          </div>
+                          <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-black">लाइव स्टेटस</span>
+                        </div>
+                      )}
+
+                      {/* Items List */}
+                      <div className="space-y-2 bg-stone-50 rounded-2xl p-3 border border-stone-200">
+                        <div className="text-[11px] font-black text-stone-500 uppercase tracking-wider mb-1">
+                          ऑर्डर किए गए प्रोडक्ट्स (Purchased Items)
+                        </div>
+                        {order.items.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-stone-200/60 shadow-2xs">
+                            <div className="flex items-center gap-3 min-w-0">
+                              {item.product.imageUrl ? (
+                                <img 
+                                  src={item.product.imageUrl} 
+                                  alt={item.product.name} 
+                                  className="w-10 h-10 object-cover rounded-lg border border-stone-200 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center text-stone-400 font-bold text-xs shrink-0">
+                                  📦
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <h5 className="font-extrabold text-stone-900 text-xs truncate">
+                                  {item.product.name}
+                                </h5>
+                                <div className="text-[11px] font-medium text-stone-500">
+                                  ₹{item.product.price} × {item.quantity} {item.product.unit || 'इकाई'}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="font-black text-stone-900 text-xs shrink-0">
+                              ₹{item.product.price * item.quantity}
+                            </span>
+                          </div>
+                        ))}
+
+                        {/* Bill Total Breakdown */}
+                        <div className="border-t border-stone-200 pt-2 space-y-1 text-xs font-semibold text-stone-700">
+                          {order.deliveryCharge !== undefined && (
+                            <div className="flex justify-between items-center text-[11px]">
+                              <span>डिलीवरी शुल्क (Delivery Charge)</span>
+                              <span>{order.deliveryCharge === 0 ? <span className="text-emerald-700 font-bold">मुफ्त (Free)</span> : `₹${order.deliveryCharge}`}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center font-black text-stone-900 text-sm pt-1 border-t border-stone-200">
+                            <span>कुल भुगतान राशि</span>
+                            <span className="text-emerald-800 text-base">₹{order.totalAmount}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delivery Address */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200">
+                        <div>
+                          <span className="font-bold text-stone-800">डिलिवरी पता: </span>
+                          <span>{order.deliveryAddress || customerUser?.address || 'स्टोर पिकअप / डिफ़ॉल्ट पता'}</span>
+                        </div>
+                        {order.paymentScreenshot && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-stone-500">पेमेंट रसीद:</span>
+                            <img
+                              src={order.paymentScreenshot}
+                              alt="Payment Proof"
+                              className="w-8 h-8 object-cover rounded-lg border border-stone-300 shadow-2xs cursor-pointer"
+                              onClick={() => {
+                                const w = window.open('');
+                                if (w) w.document.write(`<img src="${order.paymentScreenshot}" style="max-width:100%;">`);
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -859,11 +953,15 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 <button
                   onClick={() => {
                     setPlacedOrderSuccessId(null);
-                    onTabChange('orders');
+                    if (onOpenCustomerPanel) {
+                      onOpenCustomerPanel();
+                    } else {
+                      onTabChange('orders');
+                    }
                   }}
-                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-3 rounded-2xl shadow-md transition-all text-xs"
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-3 rounded-2xl shadow-md transition-all text-xs cursor-pointer"
                 >
-                  मेरे हालिया ऑर्डर देखें (My Orders)
+                  कस्टमर पैनल में ऑर्डर देखें (View Order in Customer Panel)
                 </button>
               </div>
             </motion.div>

@@ -1,0 +1,476 @@
+import React, { useState } from 'react';
+import { CustomerUser, Order, ServiceBooking } from '../types';
+import { 
+  X, 
+  UserCheck, 
+  ShoppingBag, 
+  ShieldCheck, 
+  Pencil, 
+  LogOut, 
+  Phone, 
+  MapPin, 
+  Clock, 
+  Wrench,
+  CheckCircle2
+} from 'lucide-react';
+
+interface CustomerPanelModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  customerUser: CustomerUser | null;
+  orders: Order[];
+  serviceBookings?: ServiceBooking[];
+  onCustomerLogout: () => void;
+  onUpdateCustomerProfile: (updates: Partial<CustomerUser>) => void;
+  onRequireLogin?: () => void;
+}
+
+export const CustomerPanelModal: React.FC<CustomerPanelModalProps> = ({
+  isOpen,
+  onClose,
+  customerUser,
+  orders = [],
+  serviceBookings = [],
+  onCustomerLogout,
+  onUpdateCustomerProfile
+}) => {
+  const [activeTab, setActiveTab] = useState<'orders' | 'services' | 'profile'>('orders');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  const [editName, setEditName] = useState(customerUser?.name || '');
+  const [editPhone, setEditPhone] = useState(customerUser?.phone || '');
+  const [editAddress, setEditAddress] = useState(customerUser?.address || '');
+
+  if (!isOpen) return null;
+
+  // Filter orders strictly related to this customer's phone number or name
+  const myOrders = orders.filter(o => {
+    if (!customerUser) return false;
+    const cleanCustomerPhone = (customerUser.phone || '').replace(/\D/g, '').slice(-10);
+    const cleanOrderPhone = (o.customerPhone || '').replace(/\D/g, '').slice(-10);
+    const phoneMatch = Boolean(cleanCustomerPhone && cleanOrderPhone && cleanCustomerPhone === cleanOrderPhone);
+    const nameMatch = Boolean(o.customerName && customerUser.name && o.customerName.trim().toLowerCase() === customerUser.name.trim().toLowerCase());
+    return phoneMatch || nameMatch;
+  });
+
+  // Filter service bookings strictly related to this customer's phone number or name
+  const myBookings = serviceBookings.filter(b => {
+    if (!customerUser) return false;
+    const cleanCustomerPhone = (customerUser.phone || '').replace(/\D/g, '').slice(-10);
+    const cleanBookingPhone = (b.customerPhone || '').replace(/\D/g, '').slice(-10);
+    const phoneMatch = Boolean(cleanCustomerPhone && cleanBookingPhone && cleanCustomerPhone === cleanBookingPhone);
+    const nameMatch = Boolean(b.customerName && customerUser.name && b.customerName.trim().toLowerCase() === customerUser.name.trim().toLowerCase());
+    return phoneMatch || nameMatch;
+  });
+
+  const handleOpenEdit = () => {
+    setEditName(customerUser?.name || '');
+    setEditPhone(customerUser?.phone || '');
+    setEditAddress(customerUser?.address || '');
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim() || !editPhone.trim()) {
+      alert('कृपया अपना नाम और मोबाइल नंबर दर्ज करें!');
+      return;
+    }
+    onUpdateCustomerProfile({
+      name: editName.trim(),
+      phone: editPhone.trim(),
+      address: editAddress.trim()
+    });
+    alert('✅ आपकी प्रोफाइल जानकारी सफलतापूर्वक अपडेट कर दी गई है!');
+    setIsEditingProfile(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div 
+        className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-stone-200 my-auto overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Panel Header */}
+        <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white p-5 relative shrink-0">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shrink-0">
+              <UserCheck className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-black text-lg sm:text-xl leading-tight">कस्टमर पैनल</h2>
+                <span className="bg-emerald-900 border border-emerald-400/40 text-emerald-100 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                  Customer Account
+                </span>
+              </div>
+              <p className="text-emerald-100 text-xs mt-0.5 font-medium">
+                {customerUser ? `${customerUser.name} (${customerUser.phone})` : 'अतिथि ग्राहक (Guest Customer)'}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Profile Summary Bar */}
+          {customerUser && (
+            <div className="mt-4 pt-3 border-t border-white/15 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-50">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1 font-semibold">
+                  <Phone className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>+91 {customerUser.phone}</span>
+                </span>
+                {customerUser.address && (
+                  <span className="flex items-center gap-1 font-semibold truncate max-w-[250px]">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
+                    <span className="truncate">{customerUser.address}</span>
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleOpenEdit}
+                className="bg-white/20 hover:bg-white/30 text-white font-extrabold text-[11px] px-3 py-1 rounded-xl flex items-center gap-1 transition-all"
+              >
+                <Pencil className="w-3 h-3 text-emerald-200" />
+                <span>प्रोफ़ाइल अपडेट करें</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="bg-stone-50 border-b border-stone-200 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
+          <button
+            onClick={() => { setActiveTab('orders'); setIsEditingProfile(false); }}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'orders' && !isEditingProfile
+                ? 'bg-emerald-700 text-white shadow-sm'
+                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>लाइव ऑर्डर व OTP ({myOrders.length})</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('services'); setIsEditingProfile(false); }}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'services' && !isEditingProfile
+                ? 'bg-emerald-700 text-white shadow-sm'
+                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            <Wrench className="w-4 h-4" />
+            <span>मेरी सर्विस बुकिंग्स ({myBookings.length})</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('profile'); setIsEditingProfile(true); }}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              isEditingProfile || activeTab === 'profile'
+                ? 'bg-emerald-700 text-white shadow-sm'
+                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            <Pencil className="w-4 h-4" />
+            <span>खाता जानकारी (Profile)</span>
+          </button>
+        </div>
+
+        {/* Panel Scrollable Body */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+
+          {/* EDIT PROFILE FORM */}
+          {isEditingProfile ? (
+            <form onSubmit={handleSaveProfile} className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-3">
+              <h3 className="font-extrabold text-stone-900 text-sm flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-emerald-700" />
+                <span>प्रोफ़ाइल एवं पता एडिट करें (Edit Profile Details)</span>
+              </h3>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">पूरा नाम (Full Name) *</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="अपना नाम लिखें"
+                  className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">मोबाइल नंबर (Phone Number) *</label>
+                <input
+                  type="tel"
+                  required
+                  value={editPhone}
+                  onChange={e => setEditPhone(e.target.value)}
+                  placeholder="10 अंकों का फोन नंबर"
+                  className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">डिलिवरी पता (Delivery Address)</label>
+                <textarea
+                  rows={2}
+                  value={editAddress}
+                  onChange={e => setEditAddress(e.target.value)}
+                  placeholder="मकान नंबर, गली, लैंडमार्क, क्षेत्र, शहर..."
+                  className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(false)}
+                  className="flex-1 bg-stone-200 hover:bg-stone-300 text-stone-700 font-extrabold py-2.5 rounded-xl text-xs transition-colors"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-md transition-all"
+                >
+                  सेव करें (Save Changes)
+                </button>
+              </div>
+            </form>
+          ) : activeTab === 'orders' ? (
+            /* MY LIVE ORDERS & PURCHASE HISTORY VIEW INSIDE CUSTOMER PANEL */
+            <div className="space-y-4">
+              {!customerUser?.isLoggedIn ? (
+                <div className="bg-stone-50 rounded-2xl p-8 text-center border border-stone-200 space-y-3">
+                  <UserCheck className="w-10 h-10 text-stone-400 mx-auto" />
+                  <h3 className="font-extrabold text-stone-800 text-sm">खाता लॉगिन करें</h3>
+                  <p className="text-stone-500 text-xs">अपने मोबाइल नंबर और पासवर्ड से लॉगिन करके अपने सभी ऑर्डर और डिलीवरी ट्रैक करें!</p>
+                </div>
+              ) : myOrders.length === 0 ? (
+                <div className="bg-stone-50 rounded-2xl p-8 text-center border border-stone-200 my-2">
+                  <ShoppingBag className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+                  <h3 className="font-extrabold text-stone-800 text-sm mb-1">अभी तक कोई ख़रीदारी नहीं की</h3>
+                  <p className="text-stone-500 text-xs">शॉप कैटलॉग से अपने पसंदीदा प्रोडक्ट्स जोड़कर पहला ऑर्डर करें!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myOrders.map(order => {
+                    const isDelivered = order.status === 'Delivered' || order.status === 'Settlement Completed';
+                    const isCancelled = order.status === 'Cancelled';
+                    
+                    return (
+                      <div key={order.id} className="bg-white border border-stone-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
+                        {/* Order Top Bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 pb-3">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-black text-stone-900 text-xs sm:text-sm">
+                                Order #{order.id}
+                              </span>
+                              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                                isDelivered 
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                  : isCancelled 
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-300' 
+                                    : 'bg-emerald-800 text-white shadow-2xs'
+                              }`}>
+                                {order.status}
+                              </span>
+                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                                {order.deliveryMode === 'platform' ? '🚚 स्मार्ट डिलीवरी' : '🏪 दुकान से पिकअप'}
+                              </span>
+                            </div>
+                            <div className="text-[11px] font-semibold text-stone-500 mt-1 flex items-center gap-2 flex-wrap">
+                              <span>तारीख: {new Date(order.createdAt || Date.now()).toLocaleString('hi-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                              {order.vendorName && <span className="text-stone-700 font-bold">• दुकान: {order.vendorName}</span>}
+                            </div>
+                          </div>
+
+                          {/* OTP Box for active delivery */}
+                          {order.otp && !isDelivered && !isCancelled && (
+                            <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white border border-emerald-700 px-3.5 py-1.5 rounded-2xl text-center shadow-xs">
+                              <span className="text-[9px] font-black uppercase text-amber-300 block tracking-wider">डिलीवरी OTP</span>
+                              <span className="font-mono font-black text-lg text-white tracking-widest">{order.otp}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Estimated Delivery Time Banner */}
+                        {!isDelivered && !isCancelled && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs font-extrabold text-emerald-950">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-emerald-700 shrink-0" />
+                              <span>संभावित डिलीवरी: {order.deliveryMode === 'platform' ? '25-40 मिनट में आपके पते पर' : '30 मिनट में दुकान पर तैयार'}</span>
+                            </div>
+                            <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-black">लाइव</span>
+                          </div>
+                        )}
+
+                        {/* Purchased Product Items Breakdown */}
+                        <div className="space-y-2 bg-stone-50/80 rounded-2xl p-3 border border-stone-200">
+                          <div className="text-[11px] font-black text-stone-500 uppercase tracking-wider mb-1">
+                            ऑर्डर किए गए प्रोडक्ट्स (Items)
+                          </div>
+                          {order.items.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-stone-100 shadow-2xs">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {item.product.imageUrl ? (
+                                  <img 
+                                    src={item.product.imageUrl} 
+                                    alt={item.product.name} 
+                                    className="w-10 h-10 object-cover rounded-lg border border-stone-200 shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center text-stone-400 font-bold text-xs shrink-0">
+                                    📦
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <h5 className="font-extrabold text-stone-900 text-xs truncate">
+                                    {item.product.name}
+                                  </h5>
+                                  <div className="text-[11px] font-medium text-stone-500">
+                                    ₹{item.product.price} × {item.quantity} {item.product.unit || 'इकाई'}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="font-black text-stone-900 text-xs shrink-0">
+                                ₹{item.product.price * item.quantity}
+                              </span>
+                            </div>
+                          ))}
+
+                          {/* Bill Pricing Breakdown */}
+                          <div className="border-t border-stone-200 pt-2 space-y-1 text-xs font-semibold text-stone-700">
+                            {order.deliveryCharge !== undefined && (
+                              <div className="flex justify-between items-center text-[11px]">
+                                <span>डिलीवरी शुल्क (Delivery Fee)</span>
+                                <span>{order.deliveryCharge === 0 ? <span className="text-emerald-700 font-bold">मुफ्त (Free)</span> : `₹${order.deliveryCharge}`}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center font-black text-stone-900 text-sm pt-1 border-t border-stone-200">
+                              <span>कुल भुगतान राशि (Total Bill)</span>
+                              <span className="text-emerald-800 text-base">₹{order.totalAmount}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Delivery Address & Payment details */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200">
+                          <div>
+                            <span className="font-bold text-stone-800">डिलिवरी पता: </span>
+                            <span>{order.deliveryAddress || customerUser?.address || 'स्टोर पिकअप / डिफ़ॉल्ट पता'}</span>
+                          </div>
+                          {order.paymentScreenshot && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-stone-500">पेमेंट रसीद:</span>
+                              <img
+                                src={order.paymentScreenshot}
+                                alt="Payment Proof"
+                                className="w-8 h-8 object-cover rounded-lg border border-stone-300 shadow-2xs cursor-pointer"
+                                onClick={() => {
+                                  const w = window.open('');
+                                  if (w) w.document.write(`<img src="${order.paymentScreenshot}" style="max-width:100%;">`);
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* MY SERVICE BOOKINGS VIEW */
+            <div className="space-y-3">
+              <h3 className="font-extrabold text-stone-900 text-sm">मेरी हालिया सर्विस बुकिंग्स</h3>
+              {myBookings.length === 0 ? (
+                <div className="bg-stone-50 rounded-2xl p-8 text-center border border-stone-200">
+                  <Wrench className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+                  <h3 className="font-extrabold text-stone-800 text-sm mb-1">कोई बुकिंग नहीं</h3>
+                  <p className="text-stone-500 text-xs">स्थानीय मिस्त्री व तकनीशियन सेवाओं से ऑर्डर करें!</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {myBookings.map(b => (
+                    <div key={b.id} className="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-xs text-xs space-y-1">
+                      <div className="flex justify-between items-center font-bold text-stone-900">
+                        <span>{b.serviceCategory} ({b.providerName})</span>
+                        <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          {b.status}
+                        </span>
+                      </div>
+                      <div className="text-stone-600">पता: {b.customerAddress}</div>
+                      <div className="text-stone-500 text-[11px]">विजिट शुल्क: ₹{b.visitCharge}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
+
+        {/* Panel Footer */}
+        <div className="bg-stone-100 border-t border-stone-200 p-3.5 flex items-center justify-between gap-2 shrink-0">
+          {customerUser ? (
+            showLogoutConfirm ? (
+              <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl">
+                <span className="text-xs font-black text-rose-800">लॉगआउट निश्चित?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCustomerLogout();
+                    setShowLogoutConfirm(false);
+                    onClose();
+                  }}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  हाँ, लॉगआउट
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-xs px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  रद्द
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(true)}
+                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>लॉगआउट करें (Logout)</span>
+              </button>
+            )
+          ) : (
+            <div className="text-xs font-semibold text-stone-500">
+              अतिथि मोड (Guest Mode)
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="bg-stone-800 hover:bg-stone-900 text-white font-extrabold text-xs px-5 py-2 rounded-xl transition-colors cursor-pointer"
+          >
+            बंद करें (Close)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

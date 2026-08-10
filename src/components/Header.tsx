@@ -25,6 +25,7 @@ interface HeaderProps {
   onOpenLoginModal?: () => void;
   onCustomerLogout?: () => void;
   onUpdateCustomerProfile?: (updates: Partial<CustomerUser>) => void;
+  onOpenCustomerPanel?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,7 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   customerUser,
   onOpenLoginModal,
   onCustomerLogout,
-  onUpdateCustomerProfile
+  onUpdateCustomerProfile,
+  onOpenCustomerPanel
 }) => {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -114,49 +116,36 @@ export const Header: React.FC<HeaderProps> = ({
 
             </div>
 
-            {/* Search bar for customer view in desktop */}
-            {currentRole === 'customer' && (
-              <div className="hidden lg:flex flex-1 max-w-xs mx-2">
-                <div className="relative w-full">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    placeholder="खोजें (चावल, दूध, आलू)..."
-                    className="w-full pl-9 pr-3 py-1.5 bg-stone-50 focus:bg-white text-xs border border-stone-200 focus:border-emerald-500 rounded-full outline-none transition-all font-medium"
-                  />
-                </div>
-              </div>
-            )}
+
 
             {/* Right Side: Action Badges & Three Dots Button ONLY */}
             <div className="flex items-center gap-1.5 sm:gap-2">
               {/* Customer Login / Account Badge */}
               {currentRole === 'customer' && (
                 customerUser?.isLoggedIn ? (
-                  <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-300 text-emerald-950 px-2.5 py-1 rounded-full text-xs font-extrabold shadow-xs">
-                    <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={handleOpenEditProfile}
-                      title="प्रोफाइल एडिट करें (Edit Profile)"
-                      className="max-w-[80px] sm:max-w-[120px] truncate hover:text-emerald-700 underline flex items-center gap-1 cursor-pointer"
+                      onClick={onOpenCustomerPanel}
+                      title="खाता विवरण एवं ऑर्डर इतिहास (My Account)"
+                      className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 px-3 py-1.5 rounded-full text-xs font-extrabold shadow-xs transition-all active:scale-95 cursor-pointer"
                     >
-                      <span>{customerUser.name}</span>
-                      <Pencil className="w-3 h-3 text-emerald-600 shrink-0" />
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span className="max-w-[90px] sm:max-w-[130px] truncate">{customerUser.name}</span>
                     </button>
-                    <button
-                      onClick={onCustomerLogout}
-                      title="लॉगआउट करें (Logout)"
-                      className="ml-1 p-0.5 text-rose-600 hover:text-rose-800 hover:bg-rose-100 rounded-full transition-colors"
-                    >
-                      <LogOut className="w-3 h-3" />
-                    </button>
+                    {onCustomerLogout && (
+                      <button
+                        onClick={onCustomerLogout}
+                        title="लॉगआउट करें (Logout)"
+                        className="flex items-center justify-center p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-full text-xs font-extrabold shadow-xs transition-all active:scale-95 cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <button
                     onClick={onOpenLoginModal}
-                    className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0"
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0 cursor-pointer"
                   >
                     <LogIn className="w-3.5 h-3.5" />
                     <span>लॉगिन</span>
@@ -164,16 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
                 )
               )}
 
-              {/* Active Orders Quick Access Badge */}
-              {currentRole === 'customer' && activeOrdersCount > 0 && (
-                <button
-                  onClick={onOpenOrdersTab}
-                  className="hidden sm:flex items-center gap-1.5 bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1.5 rounded-full text-xs font-black hover:bg-amber-200 transition-colors"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-spin" />
-                  <span>ऑर्डर ({activeOrdersCount})</span>
-                </button>
-              )}
+
 
               {/* Three Dots Button ONLY to open Role Switcher */}
               <button

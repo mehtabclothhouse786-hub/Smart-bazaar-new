@@ -3,13 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
   Phone, 
+  Lock, 
   X, 
   Sparkles, 
   LogIn,
-  ShieldCheck
+  UserPlus,
+  ShieldCheck,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { CustomerUser } from '../types';
 import { MadeInIndiaLogo } from './MadeInIndiaLogo';
+import { saveCustomerAccountDoc, getCustomerAccountByPhoneDoc } from '../services/db';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -22,47 +27,103 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess,
-  pendingActionText = 'खरीदारी और सर्विस बुकिंग के लिए लॉगिन आवश्यक है'
+  pendingActionText = 'खरीदारी और अपने ऑर्डर देखने के लिए लॉगिन करें'
 }) => {
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   if (!isOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     
-    const cleanName = name.trim();
     const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
-
-    if (!cleanName) {
-      setErrorMessage('कृपया अपना नाम दर्ज करें।');
-      return;
-    }
+    const cleanName = name.trim();
+    const cleanPassword = password.trim();
 
     if (cleanPhone.length !== 10) {
       setErrorMessage('कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें। (उदा: 9876543210)');
       return;
     }
 
+    if (!cleanPassword || cleanPassword.length < 4) {
+      setErrorMessage('कृपया कम से कम 4 अक्षरों का पासवर्ड दर्ज करें।');
+      return;
+    }
+
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const user: CustomerUser = {
-        id: 'cust_' + cleanPhone,
-        name: cleanName,
-        phone: cleanPhone,
-        isLoggedIn: true,
-        createdAt: Date.now()
-      };
+    try {
+      if (authMode === 'register') {
+        if (!cleanName) {
+          setErrorMessage('कृपया अपना नाम दर्ज करें।');
+          setIsSubmitting(false);
+          return;
+        }
 
+        // Check if account already exists
+        const existingAcc = await getCustomerAccountByPhoneDoc(cleanPhone);
+        if (existingAcc) {
+          setErrorMessage('यह मोबाइल नंबर पहले से रजिस्टर्ड है! कृपया लॉगिन करें।');
+          setAuthMode('login');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const newUser: CustomerUser = {
+          id: 'cust_' + cleanPhone,
+          name: cleanName,
+          phone: cleanPhone,
+          password: cleanPassword,
+          isLoggedIn: true,
+          createdAt: Date.now()
+        };
+
+        await saveCustomerAccountDoc(newUser);
+        setIsSubmitting(false);
+        onLoginSuccess(newUser);
+        onClose();
+      } else {
+        // Login Mode
+        const existingAcc = await getCustomerAccountByPhoneDoc(cleanPhone);
+
+        if (!existingAcc) {
+          setErrorMessage('यह मोबाइल नंबर रजिस्टर्ड नहीं है। कृपया "नया खाता बनाएं" चुनें!');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (existingAcc.password && existingAcc.password !== cleanPassword) {
+          setErrorMessage('गलत पासवर्ड! कृपया सही पासवर्ड दर्ज करें।');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Update password if existing user didn't have one
+        const loggedInUser: CustomerUser = {
+          ...existingAcc,
+          name: existingAcc.name || cleanName || 'Customer',
+          phone: cleanPhone,
+          password: cleanPassword,
+          isLoggedIn: true
+        };
+
+        await saveCustomerAccountDoc(loggedInUser);
+        setIsSubmitting(false);
+        onLoginSuccess(loggedInUser);
+        onClose();
+      }
+    } catch (err) {
+      console.error('Customer Auth error:', err);
+      setErrorMessage('लॉगिन करने में त्रुटि हुई। कृपया पुनः प्रयास करें।');
       setIsSubmitting(false);
-      onLoginSuccess(user);
-      onClose();
-    }, 300);
+    }
   };
 
   return (
@@ -88,10 +149,10 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
               <div>
                 <div className="flex items-center gap-1.5 text-amber-300 font-extrabold text-xs">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>स्मार्ट बाज़ार खाता (Customer Account)</span>
+                  <span>स्मार्ट बाज़ार ग्राहक खाता</span>
                 </div>
                 <h2 className="text-xl font-black tracking-tight text-white">
-                  ग्राहक लॉगिन
+                  {authMode === 'login' ? 'ग्राहक लॉगिन (Customer Login)' : 'नया ग्राहक खाता बनाएं'}
                 </h2>
               </div>
             </div>
@@ -104,8 +165,36 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
             )}
           </div>
 
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-2 bg-stone-100 p-1 border-b border-stone-200 font-bold text-xs">
+            <button
+              type="button"
+              onClick={() => { setAuthMode('login'); setErrorMessage(''); }}
+              className={`py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                authMode === 'login' 
+                  ? 'bg-white text-emerald-900 shadow-sm font-black' 
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <LogIn className="w-4 h-4 text-emerald-700" />
+              <span>लॉगिन करें (Login)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMode('register'); setErrorMessage(''); }}
+              className={`py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                authMode === 'register' 
+                  ? 'bg-white text-emerald-900 shadow-sm font-black' 
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <UserPlus className="w-4 h-4 text-emerald-700" />
+              <span>नया खाता (Sign Up)</span>
+            </button>
+          </div>
+
           {/* Form Body */}
-          <div className="p-6 space-y-5">
+          <div className="p-6 space-y-4">
             {errorMessage && (
               <div className="bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold p-3 rounded-2xl flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0 animate-ping" />
@@ -113,23 +202,25 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-extrabold text-stone-700 mb-1.5">
-                  आपका नाम (Full Name) <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="उदा: राहुल शर्मा / Mahtab"
-                    className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 focus:border-emerald-600 focus:bg-white rounded-2xl outline-none font-bold text-stone-900 text-sm transition-all"
-                  />
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authMode === 'register' && (
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-700 mb-1.5">
+                    आपका पूरा नाम (Full Name) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="उदा: राहुल शर्मा / Mahtab"
+                      className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 focus:border-emerald-600 focus:bg-white rounded-2xl outline-none font-bold text-stone-900 text-sm transition-all"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-xs font-extrabold text-stone-700 mb-1.5">
@@ -152,21 +243,50 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-extrabold text-stone-700 mb-1.5">
+                  {authMode === 'register' ? 'पासवर्ड बनाएं (Create Password)' : 'पासवर्ड (Password)'} <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-10 py-3 bg-stone-50 border border-stone-200 focus:border-emerald-600 focus:bg-white rounded-2xl outline-none font-bold text-stone-900 text-sm transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-extrabold py-3.5 px-4 rounded-2xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-extrabold py-3.5 px-4 rounded-2xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
                 >
-                  <ShieldCheck className="w-5 h-5" />
-                  <span>{isSubmitting ? 'लॉगिन हो रहा है...' : 'लॉगिन करें'}</span>
+                  <ShieldCheck className="w-5 h-5 text-amber-300" />
+                  <span>
+                    {isSubmitting 
+                      ? 'प्रोसेस हो रहा है...' 
+                      : authMode === 'login' ? 'सुरक्षित लॉगिन करें' : 'खाता बनाएं एवं लॉगिन करें'
+                    }
+                  </span>
                 </button>
               </div>
             </form>
 
             <div className="border-t border-stone-100 pt-3 text-center">
               <p className="text-[11px] text-stone-500 font-medium">
-                लॉगिन करने से आप स्मार्ट बाज़ार की सेवा शर्तों को स्वीकार करते हैं।
+                आपके सभी ऑर्डर और बुकिंग आपके मोबाइल नंबर और पासवर्ड से सुरक्षित रहते हैं।
               </p>
             </div>
           </div>

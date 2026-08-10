@@ -4,6 +4,7 @@ export interface CustomerUser {
   id: string;
   name: string;
   phone: string;
+  password?: string;
   address?: string;
   isLoggedIn: boolean;
   createdAt?: number;
