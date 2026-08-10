@@ -23,7 +23,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE, updateVendorPasswordDoc } from '../services/db';
+import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE, updateVendorPasswordDoc, updateVendorDoc } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
@@ -102,6 +102,40 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [regPassword, setRegPassword] = useState('123');
   const [regSecAnswer, setRegSecAnswer] = useState('express');
   const [isSubmittingReg, setIsSubmittingReg] = useState(false);
+
+  // Vendor Shop Edit Modal State
+  const [isEditShopModalOpen, setIsEditShopModalOpen] = useState(false);
+  const [editShopName, setEditShopName] = useState('');
+  const [editOwnerName, setEditOwnerName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+
+  const handleOpenEditShop = () => {
+    setEditShopName(currentVendor.shopName || '');
+    setEditOwnerName(currentVendor.ownerName || '');
+    setEditPhone(currentVendor.phone || '');
+    setEditCategory(currentVendor.category || '');
+    setEditAddress(currentVendor.address || '');
+    setIsEditShopModalOpen(true);
+  };
+
+  const handleSaveShopDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editShopName.trim() || !editPhone.trim()) {
+      alert('कृपया दुकान का नाम और फ़ोन नंबर दर्ज करें!');
+      return;
+    }
+    await updateVendorDoc(currentVendor.id, {
+      shopName: editShopName.trim(),
+      ownerName: editOwnerName.trim(),
+      phone: editPhone.trim(),
+      category: editCategory.trim(),
+      address: editAddress.trim()
+    });
+    alert('✅ आपकी दुकान की जानकारी सफलतापूर्वक अपडेट कर दी गई है!');
+    setIsEditShopModalOpen(false);
+  };
 
   const handleSelfRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -718,7 +752,15 @@ export const VendorView: React.FC<VendorViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
+          <button
+            onClick={handleOpenEditShop}
+            className="text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-2.5 rounded-xl border border-amber-300 transition-all flex items-center gap-1.5"
+          >
+            <Pencil className="w-4 h-4 text-amber-700" />
+            <span>दुकान जानकारी बदलें</span>
+          </button>
+
           <button
             onClick={() => setIsAddProductModalOpen(true)}
             className="bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md transition-all active:scale-95"
@@ -1332,6 +1374,103 @@ export const VendorView: React.FC<VendorViewProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit Shop Details Modal */}
+      {isEditShopModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-stone-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-4">
+              <div className="flex items-center gap-2 text-stone-900 font-extrabold text-base">
+                <Store className="w-5 h-5 text-amber-600" />
+                <span>दुकान प्रोफाइल जानकारी बदलें (Edit Shop Details)</span>
+              </div>
+              <button
+                onClick={() => setIsEditShopModalOpen(false)}
+                className="text-stone-400 hover:text-stone-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveShopDetails} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">दुकान का नाम (Shop Name) *</label>
+                <input
+                  type="text"
+                  required
+                  value={editShopName}
+                  onChange={e => setEditShopName(e.target.value)}
+                  placeholder="दुकान का नाम"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">मालिक का नाम (Owner Name)</label>
+                  <input
+                    type="text"
+                    value={editOwnerName}
+                    onChange={e => setEditOwnerName(e.target.value)}
+                    placeholder="मालिक का नाम"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">फ़ोन नंबर (Phone Number) *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editPhone}
+                    onChange={e => setEditPhone(e.target.value)}
+                    placeholder="फ़ोन नंबर"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
+                <input
+                  type="text"
+                  value={editCategory}
+                  onChange={e => setEditCategory(e.target.value)}
+                  placeholder="उदा. कपड़े / हार्डवेयर / किराना"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">दुकान का पता (Shop Address)</label>
+                <textarea
+                  rows={2}
+                  value={editAddress}
+                  onChange={e => setEditAddress(e.target.value)}
+                  placeholder="दुकान का पूरा पता"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setIsEditShopModalOpen(false)}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl transition-all"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black py-2.5 rounded-xl shadow transition-all"
+                >
+                  सेव करें (Update Shop)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Change Password Modal */}
       <ChangePasswordModal

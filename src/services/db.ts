@@ -48,7 +48,7 @@ function setLocalData(key: string, value: any) {
   }
 }
 
-// Default Initial Vendors
+// Default Initial Vendors (1 Primary Account)
 export const SAMPLE_VENDORS: Vendor[] = [
   {
     id: 'v1',
@@ -65,38 +65,6 @@ export const SAMPLE_VENDORS: Vendor[] = [
     imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500&auto=format&fit=crop&q=80',
     securityQuestion: SECURITY_QUESTION,
     securityAnswer: 'kapda'
-  },
-  {
-    id: 'v2',
-    shopName: 'Sharma Hardware Store',
-    ownerName: 'Omprakash Sharma',
-    username: 'sharma',
-    password: '12345',
-    phone: '9876500002',
-    category: 'हार्डवेयर (Hardware)',
-    status: 'active',
-    address: 'Station Road, Bijnor',
-    rating: 4.8,
-    totalOrders: 210,
-    imageUrl: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=500&auto=format&fit=crop&q=80',
-    securityQuestion: SECURITY_QUESTION,
-    securityAnswer: 'hardware'
-  },
-  {
-    id: 'v3',
-    shopName: 'Bijnor Sanitary Center',
-    ownerName: 'Ramesh Verma',
-    username: 'bijnor',
-    password: '12345',
-    phone: '9876500003',
-    category: 'सैनिटरी (Sanitaryware)',
-    status: 'active',
-    address: 'Civil Lines, Bijnor',
-    rating: 4.7,
-    totalOrders: 95,
-    imageUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&auto=format&fit=crop&q=80',
-    securityQuestion: SECURITY_QUESTION,
-    securityAnswer: 'sanitary'
   }
 ];
 
@@ -135,57 +103,6 @@ export const SAMPLE_PRODUCTS: Product[] = [
     imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=500&auto=format&fit=crop&q=80',
     description: 'आकर्षक बनारसी आर्ट सिल्क साड़ी, हैवी पल्लू वर्क।',
     isPopular: true
-  },
-  {
-    id: 'p3',
-    name: 'LED बल्ब 12W (पैक ऑफ 4)',
-    hindiName: 'LED बल्ब 12W',
-    costPrice: 199,
-    price: 249, // 199 * 1.25 = ~249
-    originalPrice: 320,
-    category: 'हार्डवेयर',
-    vendorId: 'v2',
-    vendorName: 'Sharma Hardware Store',
-    stock: 35,
-    unit: '4 Pack',
-    deliveryMode: 'self',
-    imageUrl: 'https://images.unsplash.com/photo-1550985616-10810253b84d?w=500&auto=format&fit=crop&q=80',
-    description: 'ऊर्जा बचत कूल डेलाइट 12W LED बल्ब, 1 साल वारंटी।',
-    isPopular: true
-  },
-  {
-    id: 'p4',
-    name: 'सीमेंट बैग 50KG',
-    hindiName: 'सीमेंट बैग 50KG',
-    costPrice: 328,
-    price: 410, // 328 * 1.25 = ~410
-    originalPrice: 450,
-    category: 'हार्डवेयर',
-    vendorId: 'v2',
-    vendorName: 'Sharma Hardware Store',
-    stock: 50,
-    unit: '50 kg Bag',
-    deliveryMode: 'self',
-    imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=500&auto=format&fit=crop&q=80',
-    description: 'उच्च गुणवत्ता अल्ट्रा-मजबूत कंस्ट्रक्शन सीमेंट।',
-    isPopular: false
-  },
-  {
-    id: 'p5',
-    name: 'वॉश बेसिन प्रीमियम',
-    hindiName: 'वॉश बेसिन प्रीमियम',
-    costPrice: 1759,
-    price: 2199, // 1759 * 1.25 = ~2199
-    originalPrice: 2799,
-    category: 'सैनिटरी',
-    vendorId: 'v3',
-    vendorName: 'Bijnor Sanitary Center',
-    stock: 8,
-    unit: '1 Set',
-    deliveryMode: 'platform',
-    imageUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&auto=format&fit=crop&q=80',
-    description: 'ग्लोसी सेरामिक टेबल टॉप वॉश बेसिन।',
-    isPopular: true
   }
 ];
 
@@ -204,21 +121,6 @@ export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [
     rating: 4.9,
     securityQuestion: SECURITY_QUESTION,
     securityAnswer: 'chandpur'
-  },
-  {
-    id: 'dp2',
-    name: 'Suresh Yadav',
-    phone: '9123456780',
-    password: '12345',
-    vehicle: 'साइकिल',
-    status: 'Online',
-    currentLocation: 'Bijnor',
-    earnings: 620,
-    walletBalance: 310,
-    completedDeliveries: 18,
-    rating: 4.8,
-    securityQuestion: SECURITY_QUESTION,
-    securityAnswer: 'bijnor'
   }
 ];
 
@@ -498,6 +400,51 @@ export async function updateOrderStatusDoc(
   }
 }
 
+export async function updateVendorDoc(vendorId: string, updates: Partial<Vendor>) {
+  try {
+    const cleanUpdates = sanitizeForFirestore(updates);
+    await updateDoc(doc(db, VENDORS_COL, vendorId), cleanUpdates);
+  } catch (e) {
+    console.error('Error updating vendor doc:', e);
+    const current = getLocalData<Vendor[]>(VENDORS_COL, SAMPLE_VENDORS);
+    const idx = current.findIndex(v => v.id === vendorId);
+    if (idx !== -1) {
+      current[idx] = { ...current[idx], ...updates };
+      setLocalData(VENDORS_COL, current);
+    }
+  }
+}
+
+export async function updateDeliveryPartnerDoc(partnerId: string, updates: Partial<DeliveryPartner>) {
+  try {
+    const cleanUpdates = sanitizeForFirestore(updates);
+    await updateDoc(doc(db, DELIVERY_COL, partnerId), cleanUpdates);
+  } catch (e) {
+    console.error('Error updating delivery partner doc:', e);
+    const current = getLocalData<DeliveryPartner[]>(DELIVERY_COL, SAMPLE_DELIVERY_PARTNERS);
+    const idx = current.findIndex(p => p.id === partnerId);
+    if (idx !== -1) {
+      current[idx] = { ...current[idx], ...updates };
+      setLocalData(DELIVERY_COL, current);
+    }
+  }
+}
+
+export async function updateServiceProviderDoc(serviceId: string, updates: Partial<ServiceProvider>) {
+  try {
+    const cleanUpdates = sanitizeForFirestore(updates);
+    await updateDoc(doc(db, SERVICES_COL, serviceId), cleanUpdates);
+  } catch (e) {
+    console.error('Error updating service provider doc:', e);
+    const current = getLocalData<ServiceProvider[]>(SERVICES_COL, SAMPLE_SERVICES);
+    const idx = current.findIndex(s => s.id === serviceId);
+    if (idx !== -1) {
+      current[idx] = { ...current[idx], ...updates };
+      setLocalData(SERVICES_COL, current);
+    }
+  }
+}
+
 export async function addVendorDoc(vendor: Omit<Vendor, 'id'>) {
   const newId = 'v_' + Date.now();
   const vObj: Vendor = { ...vendor, id: newId };
@@ -597,62 +544,6 @@ export const SAMPLE_SERVICES: ServiceProvider[] = [
     rating: 4.9,
     experienceYears: 7,
     imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's2',
-    providerName: 'सुनील कुमार (इलेक्ट्रिकल)',
-    serviceName: 'इलेक्ट्रिशियन व AC/फ्रीज रिपेयर',
-    category: 'इलेक्ट्रिशियन',
-    description: 'घर की वायरिंग, पंखा, स्टेबलाइजर, AC सर्विसिंग एवं इन्वर्टर रिपेयरिंग एक्सपर्ट।',
-    primaryPhone: '9988776655',
-    whatsappPhone: '9988776655',
-    address: 'स्टेशन रोड, बिजनौर',
-    rating: 4.8,
-    experienceYears: 10,
-    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's3',
-    providerName: 'डॉ. अमित शर्मा (BAMS)',
-    serviceName: 'होम विजिट डॉक्टर / हेल्थ कंसल्टेशन',
-    category: 'डॉक्टर',
-    description: 'सामान्य बुखार, बीपी, शुगर, स्किन एवं आयुर्वेदिक प्राथमिक उपचार सेवा।',
-    primaryPhone: '9812345678',
-    whatsappPhone: '9812345678',
-    address: 'सिविल लाइंस, बिजनौर',
-    rating: 5.0,
-    experienceYears: 12,
-    imageUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's4',
-    providerName: 'पिंकी लेडीज ब्यूटी पार्लर',
-    serviceName: 'होम मेक-अप, फेशियल व ब्यूटी सर्विस',
-    category: 'ब्यूटी पार्लर',
-    description: 'ब्राइडल मेक-अप, हेयर स्टाइल, थ्रेडिंग, फेशियल व स्किन केयर केवल महिलाओं हेतु।',
-    primaryPhone: '9765432109',
-    whatsappPhone: '9765432109',
-    address: 'मेन बाज़ार, चांदपुर',
-    rating: 4.9,
-    experienceYears: 6,
-    imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's5',
-    providerName: 'विक्रम AC & LED रिपेयरिंग',
-    serviceName: 'LED टीवी व होम अप्लायंसेज तकनीशियन',
-    category: 'तकनीशियन',
-    description: 'स्मार्ट टीवी, वाशिंग मशीन, मिक्सर ग्राइंडर व गीजर रिपेयरिंग सर्विस।',
-    primaryPhone: '9543210987',
-    whatsappPhone: '9543210987',
-    address: 'चांदपुर चुंगी, बिजनौर',
-    rating: 4.7,
-    experienceYears: 8,
-    imageUrl: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=500&auto=format&fit=crop&q=80',
     createdAt: Date.now()
   }
 ];

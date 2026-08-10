@@ -101,6 +101,17 @@ export default function App() {
     }
   };
 
+  const handleUpdateCustomerProfile = (updates: Partial<CustomerUser>) => {
+    if (!customerUser) return;
+    const updatedUser: CustomerUser = { ...customerUser, ...updates };
+    setCustomerUser(updatedUser);
+    try {
+      localStorage.setItem('smart_bazaar_customer_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.error('Error updating customer profile:', e);
+    }
+  };
+
   const triggerCustomerLogin = (actionCallback?: () => void, promptText?: string) => {
     if (actionCallback) {
       setPendingAuthAction(() => actionCallback);
@@ -338,6 +349,7 @@ export default function App() {
         customerUser={customerUser}
         onOpenLoginModal={() => triggerCustomerLogin()}
         onCustomerLogout={handleCustomerLogout}
+        onUpdateCustomerProfile={handleUpdateCustomerProfile}
       />
 
       {/* Role View Container */}

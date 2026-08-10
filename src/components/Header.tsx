@@ -8,7 +8,8 @@ import {
   X,
   UserCheck,
   LogIn,
-  LogOut
+  LogOut,
+  Pencil
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -23,6 +24,7 @@ interface HeaderProps {
   customerUser?: CustomerUser | null;
   onOpenLoginModal?: () => void;
   onCustomerLogout?: () => void;
+  onUpdateCustomerProfile?: (updates: Partial<CustomerUser>) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,9 +38,40 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenOrdersTab,
   customerUser,
   onOpenLoginModal,
-  onCustomerLogout
+  onCustomerLogout,
+  onUpdateCustomerProfile
 }) => {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+
+  const handleOpenEditProfile = () => {
+    if (customerUser) {
+      setEditName(customerUser.name || '');
+      setEditPhone(customerUser.phone || '');
+      setEditAddress(customerUser.address || '');
+      setIsEditProfileOpen(true);
+    }
+  };
+
+  const handleSaveCustomerProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim() || !editPhone.trim()) {
+      alert('कृपया अपना नाम और मोबाइल नंबर दर्ज करें!');
+      return;
+    }
+    if (onUpdateCustomerProfile) {
+      onUpdateCustomerProfile({
+        name: editName.trim(),
+        phone: editPhone.trim(),
+        address: editAddress.trim()
+      });
+      alert('✅ आपकी प्रोफाइल जानकारी सफलतापूर्वक अपडेट कर दी गई है!');
+    }
+    setIsEditProfileOpen(false);
+  };
 
   const roles: { id: UserRole; label: string }[] = [
     { id: 'customer', label: 'ग्राहक' },
@@ -104,7 +137,14 @@ export const Header: React.FC<HeaderProps> = ({
                 customerUser?.isLoggedIn ? (
                   <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-300 text-emerald-950 px-2.5 py-1 rounded-full text-xs font-extrabold shadow-xs">
                     <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                    <span className="max-w-[80px] sm:max-w-[120px] truncate">{customerUser.name}</span>
+                    <button
+                      onClick={handleOpenEditProfile}
+                      title="प्रोफाइल एडिट करें (Edit Profile)"
+                      className="max-w-[80px] sm:max-w-[120px] truncate hover:text-emerald-700 underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>{customerUser.name}</span>
+                      <Pencil className="w-3 h-3 text-emerald-600 shrink-0" />
+                    </button>
                     <button
                       onClick={onCustomerLogout}
                       title="लॉगआउट करें (Logout)"
@@ -216,6 +256,90 @@ export const Header: React.FC<HeaderProps> = ({
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Edit Profile Modal */}
+      {isEditProfileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setIsEditProfileOpen(false)}
+        >
+          <div 
+            className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 border border-stone-200 relative animate-in zoom-in-95 duration-150 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                  <Pencil className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-stone-900 text-base">ग्राहक प्रोफ़ाइल एडिट करें</h3>
+                  <p className="text-[11px] text-stone-500">Edit Customer Profile Details</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditProfileOpen(false)}
+                className="p-1 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomerProfile} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">पूरा नाम (Full Name) *</label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="अपना नाम लिखें"
+                  className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">मोबाइल नंबर (Phone Number) *</label>
+                <input
+                  type="tel"
+                  required
+                  value={editPhone}
+                  onChange={e => setEditPhone(e.target.value)}
+                  placeholder="10 अंकों का फोन नंबर"
+                  className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">डिलिवरी पता (Delivery Address)</label>
+                <textarea
+                  rows={2}
+                  value={editAddress}
+                  onChange={e => setEditAddress(e.target.value)}
+                  placeholder="मकान नंबर, गली, लैंडमार्क, क्षेत्र, शहर..."
+                  className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-stone-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditProfileOpen(false)}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-extrabold py-2.5 rounded-xl text-xs transition-colors"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-md transition-all"
+                >
+                  सेव करें (Save Changes)
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

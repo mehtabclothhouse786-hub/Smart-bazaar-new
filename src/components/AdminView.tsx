@@ -24,6 +24,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { firebaseConfigData } from '../firebase';
+import { updateVendorDoc, updateDeliveryPartnerDoc, updateServiceProviderDoc } from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface AdminViewProps {
@@ -262,6 +263,75 @@ export const AdminView: React.FC<AdminViewProps> = ({
       } catch (err) {
         console.error('Error deleting vendor:', err);
       }
+    }
+  };
+
+  // Admin Editing States
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [editingPartner, setEditingPartner] = useState<DeliveryPartner | null>(null);
+  const [editingService, setEditingService] = useState<ServiceProvider | null>(null);
+
+  // Save Vendor Edits
+  const handleSaveVendorEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVendor) return;
+    try {
+      await updateVendorDoc(editingVendor.id, {
+        shopName: editingVendor.shopName,
+        ownerName: editingVendor.ownerName,
+        phone: editingVendor.phone,
+        category: editingVendor.category,
+        address: editingVendor.address,
+        password: editingVendor.password,
+        securityAnswer: editingVendor.securityAnswer
+      });
+      alert(`✅ वेंडर "${editingVendor.shopName}" की जानकारी अपडेट हो गई है!`);
+      setEditingVendor(null);
+    } catch (err) {
+      console.error('Error saving vendor edit:', err);
+      alert('अपडेट में त्रुटि हुई।');
+    }
+  };
+
+  // Save Partner Edits
+  const handleSavePartnerEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPartner) return;
+    try {
+      await updateDeliveryPartnerDoc(editingPartner.id, {
+        name: editingPartner.name,
+        phone: editingPartner.phone,
+        vehicle: editingPartner.vehicle,
+        password: editingPartner.password,
+        securityAnswer: editingPartner.securityAnswer
+      });
+      alert(`✅ राइडर "${editingPartner.name}" की जानकारी अपडेट हो गई है!`);
+      setEditingPartner(null);
+    } catch (err) {
+      console.error('Error saving partner edit:', err);
+      alert('अपडेट में त्रुटि हुई।');
+    }
+  };
+
+  // Save Service Edits
+  const handleSaveServiceEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService) return;
+    try {
+      await updateServiceProviderDoc(editingService.id, {
+        providerName: editingService.providerName,
+        primaryPhone: editingService.primaryPhone,
+        category: editingService.category,
+        serviceName: editingService.serviceName,
+        location: editingService.location,
+        visitCharge: editingService.visitCharge,
+        password: editingService.password
+      });
+      alert(`✅ सर्विस प्रोवाइडर "${editingService.providerName}" की जानकारी अपडेट हो गई है!`);
+      setEditingService(null);
+    } catch (err) {
+      console.error('Error saving service edit:', err);
+      alert('अपडेट में त्रुटि हुई।');
     }
   };
 
@@ -769,14 +839,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <div>सुरक्षा शब्द: <span className="font-mono font-bold text-stone-700">{v.securityAnswer || 'express'}</span></div>
                 </div>
 
-                {/* Delete Vendor Button */}
-                <div className="pt-2 border-t border-stone-100 flex justify-end">
+                {/* Edit & Delete Vendor Buttons */}
+                <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setEditingVendor({ ...v })}
+                    className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 border border-amber-200 transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>एडिट करें</span>
+                  </button>
                   <button
                     onClick={() => handleDeleteVendorClick(v)}
-                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 border border-rose-200 transition-colors"
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 border border-rose-200 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>वेंडर हटाएं (Remove Vendor)</span>
+                    <span>हटाएं</span>
                   </button>
                 </div>
               </div>
@@ -835,14 +912,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <div>पूरी की गई डिलीवरी: {dp.completedDeliveries}</div>
                 </div>
 
-                {/* Delete Partner Button */}
-                <div className="pt-2 border-t border-stone-100 flex justify-end">
+                {/* Edit & Delete Partner Buttons */}
+                <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setEditingPartner({ ...dp })}
+                    className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 border border-amber-200 transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>एडिट करें</span>
+                  </button>
                   <button
                     onClick={() => handleDeletePartnerClick(dp)}
-                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 border border-rose-200 transition-colors"
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 border border-rose-200 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>राइडर हटाएं (Remove Partner)</span>
+                    <span>हटाएं</span>
                   </button>
                 </div>
               </div>
@@ -904,14 +988,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     {s.description && <div className="text-[11px] text-stone-500 italic">{s.description}</div>}
                   </div>
 
-                  {/* Delete Service Provider Button */}
-                  <div className="pt-2 border-t border-stone-100 flex justify-end">
+                  {/* Edit & Delete Service Provider Buttons */}
+                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setEditingService({ ...s })}
+                      className="bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 border border-purple-200 transition-colors cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>एडिट करें</span>
+                    </button>
                     <button
                       onClick={() => handleDeleteServiceClick(s)}
-                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1 border border-rose-200 transition-colors"
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1 border border-rose-200 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>सर्विस हटाएं (Remove Provider)</span>
+                      <span>हटाएं</span>
                     </button>
                   </div>
                 </div>
@@ -1378,6 +1469,282 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   className="flex-1 bg-purple-700 hover:bg-purple-800 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-md disabled:opacity-50"
                 >
                   {isSubmittingService ? 'जोड़ा जा रहा है...' : 'सर्विस सुरक्षित करें (Save Service)'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Edit Vendor Modal */}
+      {editingVendor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-stone-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-4">
+              <h3 className="font-extrabold text-stone-900 text-base flex items-center gap-2">
+                <Store className="w-5 h-5 text-emerald-600" />
+                <span>वेंडर विवरण एडिट करें ({editingVendor.shopName})</span>
+              </h3>
+              <button onClick={() => setEditingVendor(null)} className="text-stone-400 hover:text-stone-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveVendorEdit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">दुकान का नाम (Shop Name) *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingVendor.shopName}
+                  onChange={e => setEditingVendor({ ...editingVendor, shopName: e.target.value })}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">मालिक का नाम</label>
+                  <input
+                    type="text"
+                    value={editingVendor.ownerName}
+                    onChange={e => setEditingVendor({ ...editingVendor, ownerName: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">फ़ोन नंबर *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editingVendor.phone}
+                    onChange={e => setEditingVendor({ ...editingVendor, phone: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
+                  <input
+                    type="text"
+                    value={editingVendor.category}
+                    onChange={e => setEditingVendor({ ...editingVendor, category: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">पासवर्ड</label>
+                  <input
+                    type="text"
+                    value={editingVendor.password || ''}
+                    onChange={e => setEditingVendor({ ...editingVendor, password: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">पता (Address)</label>
+                <textarea
+                  rows={2}
+                  value={editingVendor.address}
+                  onChange={e => setEditingVendor({ ...editingVendor, address: e.target.value })}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingVendor(null)}
+                  className="flex-1 bg-stone-100 text-stone-700 font-bold py-2.5 rounded-xl text-xs"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl text-xs shadow"
+                >
+                  सेव करें (Save Vendor)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Edit Delivery Partner Modal */}
+      {editingPartner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-stone-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-4">
+              <h3 className="font-extrabold text-stone-900 text-base flex items-center gap-2">
+                <Truck className="w-5 h-5 text-blue-600" />
+                <span>राइडर विवरण एडिट करें ({editingPartner.name})</span>
+              </h3>
+              <button onClick={() => setEditingPartner(null)} className="text-stone-400 hover:text-stone-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePartnerEdit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">राइडर नाम (Full Name) *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingPartner.name}
+                  onChange={e => setEditingPartner({ ...editingPartner, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">फ़ोन नंबर *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editingPartner.phone}
+                    onChange={e => setEditingPartner({ ...editingPartner, phone: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">वाहन (Vehicle)</label>
+                  <input
+                    type="text"
+                    value={editingPartner.vehicle}
+                    onChange={e => setEditingPartner({ ...editingPartner, vehicle: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">पासवर्ड</label>
+                <input
+                  type="text"
+                  value={editingPartner.password || ''}
+                  onChange={e => setEditingPartner({ ...editingPartner, password: e.target.value })}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingPartner(null)}
+                  className="flex-1 bg-stone-100 text-stone-700 font-bold py-2.5 rounded-xl text-xs"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white font-extrabold py-2.5 rounded-xl text-xs shadow"
+                >
+                  सेव करें (Save Rider)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Edit Service Provider Modal */}
+      {editingService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-stone-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-4">
+              <h3 className="font-extrabold text-stone-900 text-base flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-purple-600" />
+                <span>सर्विस प्रोवाइडर एडिट करें ({editingService.providerName})</span>
+              </h3>
+              <button onClick={() => setEditingService(null)} className="text-stone-400 hover:text-stone-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveServiceEdit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">प्रदाता नाम (Provider Name) *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingService.providerName}
+                  onChange={e => setEditingService({ ...editingService, providerName: e.target.value })}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">फ़ोन नंबर *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editingService.primaryPhone}
+                    onChange={e => setEditingService({ ...editingService, primaryPhone: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">सर्विस नाम</label>
+                  <input
+                    type="text"
+                    value={editingService.serviceName || ''}
+                    onChange={e => setEditingService({ ...editingService, serviceName: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">विजिट चार्ज (₹)</label>
+                  <input
+                    type="number"
+                    value={editingService.visitCharge || 0}
+                    onChange={e => setEditingService({ ...editingService, visitCharge: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">लोकेशन / स्थान</label>
+                  <input
+                    type="text"
+                    value={editingService.location || ''}
+                    onChange={e => setEditingService({ ...editingService, location: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">पासवर्ड</label>
+                <input
+                  type="text"
+                  value={editingService.password || ''}
+                  onChange={e => setEditingService({ ...editingService, password: e.target.value })}
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingService(null)}
+                  className="flex-1 bg-stone-100 text-stone-700 font-bold py-2.5 rounded-xl text-xs"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-purple-700 text-white font-extrabold py-2.5 rounded-xl text-xs shadow"
+                >
+                  सेव करें (Save Service)
                 </button>
               </div>
             </form>

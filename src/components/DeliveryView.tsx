@@ -24,7 +24,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { updatePartnerPasswordDoc } from '../services/db';
+import { updatePartnerPasswordDoc, updateDeliveryPartnerDoc } from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface DeliveryViewProps {
@@ -65,6 +65,37 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
   const [regPassword, setRegPassword] = useState('123');
   const [regSecAnswer, setRegSecAnswer] = useState('express');
   const [isSubmittingReg, setIsSubmittingReg] = useState(false);
+
+  // Delivery Partner Profile Edit State
+  const [isEditRiderOpen, setIsEditRiderOpen] = useState(false);
+  const [editRiderName, setEditRiderName] = useState('');
+  const [editRiderPhone, setEditRiderPhone] = useState('');
+  const [editRiderVehicle, setEditRiderVehicle] = useState('');
+  const [editRiderLocation, setEditRiderLocation] = useState('');
+
+  const handleOpenEditRider = () => {
+    setEditRiderName(currentPartner.name || '');
+    setEditRiderPhone(currentPartner.phone || '');
+    setEditRiderVehicle(currentPartner.vehicle || '');
+    setEditRiderLocation(currentPartner.currentLocation || '');
+    setIsEditRiderOpen(true);
+  };
+
+  const handleSaveRiderDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editRiderName.trim() || !editRiderPhone.trim()) {
+      alert('कृपया नाम और फ़ोन नंबर दर्ज करें!');
+      return;
+    }
+    await updateDeliveryPartnerDoc(currentPartner.id, {
+      name: editRiderName.trim(),
+      phone: editRiderPhone.trim(),
+      vehicle: editRiderVehicle.trim(),
+      currentLocation: editRiderLocation.trim()
+    });
+    alert('✅ आपकी राइडर प्रोफ़ाइल जानकारी अपडेट हो गई है!');
+    setIsEditRiderOpen(false);
+  };
 
   const handleSelfRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -518,7 +549,15 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
+          <button
+            onClick={handleOpenEditRider}
+            className="text-xs font-bold text-amber-300 bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl border border-stone-700 transition-all flex items-center gap-1.5"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            <span>प्रोफ़ाइल एडिट करें</span>
+          </button>
+
           <button
             onClick={toggleDutyStatus}
             className={`text-xs font-extrabold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-sm transition-all ${
@@ -998,6 +1037,90 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit Rider Profile Modal */}
+      {isEditRiderOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-stone-200">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-4">
+              <div className="flex items-center gap-2 text-stone-900 font-extrabold text-base">
+                <Truck className="w-5 h-5 text-emerald-600" />
+                <span>राइडर प्रोफ़ाइल एडिट करें (Edit Rider Profile)</span>
+              </div>
+              <button
+                onClick={() => setIsEditRiderOpen(false)}
+                className="text-stone-400 hover:text-stone-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRiderDetails} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">राइडर नाम (Full Name) *</label>
+                <input
+                  type="text"
+                  required
+                  value={editRiderName}
+                  onChange={e => setEditRiderName(e.target.value)}
+                  placeholder="राइडर का पूरा नाम"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">मोबाइल नंबर (Phone Number) *</label>
+                <input
+                  type="tel"
+                  required
+                  value={editRiderPhone}
+                  onChange={e => setEditRiderPhone(e.target.value)}
+                  placeholder="10 अंकों का मोबाइल नंबर"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">वाहन प्रकार (Vehicle)</label>
+                <input
+                  type="text"
+                  value={editRiderVehicle}
+                  onChange={e => setEditRiderVehicle(e.target.value)}
+                  placeholder="उदा. बाइक / स्कूटी / ई-रिक्शा"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">वर्तमान लोकेशन (Current Location)</label>
+                <input
+                  type="text"
+                  value={editRiderLocation}
+                  onChange={e => setEditRiderLocation(e.target.value)}
+                  placeholder="उदा. मुख्य बाजार, चौक"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-3 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setIsEditRiderOpen(false)}
+                  className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl transition-all"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl shadow transition-all"
+                >
+                  सेव करें (Update Profile)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Change Password Modal */}
       <ChangePasswordModal
