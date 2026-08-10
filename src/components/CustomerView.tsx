@@ -55,6 +55,9 @@ interface CustomerViewProps {
   onAddService?: (service: Omit<ServiceProvider, 'id'>) => Promise<string>;
   onDeleteService?: (serviceId: string) => Promise<void>;
   onCreateBooking?: (booking: Omit<ServiceBooking, 'id'>) => Promise<string>;
+  isCartOpen?: boolean;
+  onCloseCart?: () => void;
+  onOpenCart?: () => void;
 }
 
 export const CustomerView: React.FC<CustomerViewProps> = ({
@@ -73,20 +76,31 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   serviceBookings = [],
   onAddService = async () => '',
   onDeleteService = async () => {},
-  onCreateBooking = async () => ''
+  onCreateBooking = async () => '',
+  isCartOpen = false,
+  onCloseCart,
+  onOpenCart
 }) => {
   const [customerShopView, setCustomerShopView] = useState<'list' | 'catalog'>('list');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   
   // Checkout Modal state
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState<boolean>(false);
+  const [placedOrderSuccessId, setPlacedOrderSuccessId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [deliveryAddress, setDeliveryAddress] = useState<string>('');
-  const [paymentMode, setPaymentMode] = useState<'online' | 'cod'>('online');
+  const [paymentMode, setPaymentMode] = useState<'online' | 'cod'>('cod');
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Sync external isCartOpen with local modal state
+  React.useEffect(() => {
+    if (isCartOpen) {
+      setIsCheckoutModalOpen(true);
+    }
+  }, [isCartOpen]);
 
   // Cart math
   const cartSubtotal = (cart || []).reduce((sum, item) => sum + ((item?.product?.price || 0) * (item?.quantity || 1)), 0);
@@ -121,8 +135,13 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   // Handle Checkout Submission
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !customerPhone) {
+    const cleanPhone = customerPhone.trim().replace(/[^0-9]/g, '');
+    if (!customerName || !cleanPhone) {
       alert('कृपया नाम और मोबाइल नंबर भरें।');
+      return;
+    }
+    if (cleanPhone.length < 10) {
+      alert('कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें। (उदा: 9876543210)');
       return;
     }
     if (!hasSelfOnlyItems && !deliveryAddress) {
@@ -141,9 +160,9 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       const finalPayMode = hasSelfOnlyItems ? 'shop' : paymentMode;
 
       const newOrderId = await onPlaceOrder({
-        customerName,
-        customerPhone,
-        deliveryAddress: hasSelfOnlyItems ? 'दुकान से पिकअप (Self Delivery)' : deliveryAddress,
+        customerName: customerName.trim(),
+        customerPhone: cleanPhone,
+        deliveryAddress: hasSelfOnlyItems ? 'दुकान से पिकअप (Self Delivery)' : deliveryAddress.trim(),
         items: [...cart],
         subtotal: cartSubtotal,
         deliveryCharge: deliveryFee,
@@ -154,15 +173,20 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       });
 
       if (hasSelfOnlyItems && selectedVendor) {
-        const text = `नमस्ते, मैंने आपके स्टोर "${selectedVendor.shopName}" से ऑर्डर #${newOrderId} किया है — ${customerName}, मोबाइल: ${customerPhone}। पिकअप की जानकारी दें।`;
-        window.open(`https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`, '_blank');
+        const text = `नमस्ते, मैंने आपके स्टोर "${selectedVendor.shopName}" से ऑर्डर #${newOrderId} किया है — ${customerName}, मोबाइल: ${cleanPhone}। पिकअप की जानकारी दें।`;
+        try {
+          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+        } catch (e) {
+          console.error(e);
+        }
       }
 
       setIsCheckoutModalOpen(false);
+      onCloseCart?.();
       onClearCart();
       setScreenshotDataUrl(null);
       setScreenshotPreview(null);
-      onTabChange('orders');
+      setPlacedOrderSuccessId(newOrderId);
     } catch (err) {
       console.error('Order error:', err);
       alert('ऑर्डर प्लेस करने में त्रुटि हुई। कृपया पुनः प्रयास करें।');
@@ -412,12 +436,23 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => onAddToCart(product)}
-                                className="bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
-                              >
-                                कार्ट में जोड़ें
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => onAddToCart(product)}
+                                  className="bg-amber-400 hover:bg-amber-500 text-stone-950 font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
+                                >
+                                  कार्ट में जोड़ें
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    onAddToCart(product);
+                                    setIsCheckoutModalOpen(true);
+                                  }}
+                                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
+                                >
+                                  अभी बुक करें
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -709,6 +744,96 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                   </button>
                 </form>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* STICKY FLOATING CART & CHECKOUT BAR */}
+      {cart.length > 0 && !isCheckoutModalOpen && !placedOrderSuccessId && (
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed bottom-4 left-4 right-4 max-w-xl mx-auto z-40"
+        >
+          <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-stone-900 text-white rounded-3xl p-3 sm:p-4 px-4 sm:px-6 shadow-2xl border-2 border-amber-400 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-400 text-stone-950 flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+                {(cart || []).reduce((sum, item) => sum + (item?.quantity || 1), 0)}
+              </div>
+              <div>
+                <div className="font-extrabold text-xs sm:text-sm leading-tight text-white">
+                  {(cart || []).reduce((sum, item) => sum + (item?.quantity || 1), 0)} आइटम्स कार्ट में
+                </div>
+                <div className="text-xs text-amber-300 font-black">
+                  कुल राशि: ₹{grandTotal}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsCheckoutModalOpen(true)}
+              className="bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-2xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+            >
+              <span>ऑर्डर / बुक करें</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* PLACED ORDER SUCCESS MODAL */}
+      <AnimatePresence>
+        {placedOrderSuccessId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-stone-200 text-center space-y-4"
+            >
+              <div className="w-16 h-16 bg-emerald-100 border-2 border-emerald-400 rounded-full flex items-center justify-center text-emerald-700 mx-auto">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+
+              <div>
+                <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 rounded-full border border-emerald-300 mb-2">
+                  ऑर्डर सफलतापूर्वक दर्ज हो गया!
+                </span>
+                <h2 className="text-xl font-black text-stone-900">
+                  ऑर्डर आईडी: #{placedOrderSuccessId}
+                </h2>
+                <p className="text-stone-600 text-xs mt-1 font-medium">
+                  आपका बुकिंग / ऑर्डर स्मार्ट बाजार सिस्टम में सेव हो चुका है।
+                </p>
+              </div>
+
+              <div className="bg-stone-50 border border-stone-200 rounded-2xl p-3 text-left space-y-1 text-xs font-semibold text-stone-700">
+                <div className="flex justify-between">
+                  <span>ग्राहक का नाम:</span>
+                  <span className="font-extrabold text-stone-900">{customerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>मोबाइल नंबर:</span>
+                  <span className="font-extrabold text-stone-900">+91 {customerPhone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>भुगतान का प्रकार:</span>
+                  <span className="font-extrabold text-emerald-800 uppercase">{paymentMode}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setPlacedOrderSuccessId(null);
+                    onTabChange('orders');
+                  }}
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-3 rounded-2xl shadow-md transition-all text-xs"
+                >
+                  मेरे हालिया ऑर्डर देखें (My Orders)
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

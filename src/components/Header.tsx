@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { UserRole } from '../types';
 import { MadeInIndiaLogo } from './MadeInIndiaLogo';
 import { 
-  ShoppingCart, 
   Search,
   Sparkles,
   MoreHorizontal,
@@ -69,18 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
                 स्मार्ट<br />बाज़ार
               </div>
 
-              {/* Green Cart Icon Badge */}
-              <button
-                onClick={onOpenCart}
-                className="bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white p-2 sm:p-2.5 rounded-2xl shadow-sm border border-emerald-500 flex items-center justify-center transition-all active:scale-95 shrink-0 relative"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-stone-950 font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
+
             </div>
 
             {/* Search bar for customer view in desktop */}

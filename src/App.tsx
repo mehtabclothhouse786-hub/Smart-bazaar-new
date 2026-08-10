@@ -52,6 +52,7 @@ export default function App() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [customerTab, setCustomerTab] = useState<'shop' | 'services' | 'orders'>('shop');
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Save cart to local storage
   useEffect(() => {
@@ -247,10 +248,9 @@ export default function App() {
         onRoleChange={setCurrentRole}
         cartCount={totalCartCount}
         onOpenCart={() => {
-          if (currentRole === 'customer') {
-            setCustomerTab('shop');
-            // Cart drawer can be triggered inside CustomerView
-          }
+          setCurrentRole('customer');
+          setCustomerTab('shop');
+          setIsCartOpen(true);
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -281,6 +281,9 @@ export default function App() {
             onAddService={handleAddService}
             onDeleteService={handleDeleteService}
             onCreateBooking={handleCreateBooking}
+            isCartOpen={isCartOpen}
+            onCloseCart={() => setIsCartOpen(false)}
+            onOpenCart={() => setIsCartOpen(true)}
           />
         )}
 

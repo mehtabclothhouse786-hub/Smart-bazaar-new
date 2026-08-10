@@ -64,6 +64,13 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
   const [customerName, setCustomerName] = useState<string>('');
   const [customerAddress, setCustomerAddress] = useState<string>('');
   const [isSubmittingBooking, setIsSubmittingBooking] = useState<boolean>(false);
+  const [createdBookingSuccess, setCreatedBookingSuccess] = useState<{
+    id: string;
+    providerPhone: string;
+    whatsappPhone: string;
+    serviceName: string;
+    providerName: string;
+  } | null>(null);
 
   // Add Service Form State
   const [newProviderName, setNewProviderName] = useState<string>('');
@@ -109,7 +116,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
     setIsSubmittingBooking(true);
     try {
       // Save booking in Firestore / LocalStorage for history & leads
-      await onCreateBooking({
+      const newBookingId = await onCreateBooking({
         serviceId: selectedService.id,
         serviceName: selectedService.serviceName,
         providerName: selectedService.providerName,
@@ -124,25 +131,42 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
       const providerPhone = selectedService.primaryPhone.trim().replace(/[^0-9]/g, '');
       const whatsappPhone = (selectedService.whatsappPhone || selectedService.primaryPhone).trim().replace(/[^0-9]/g, '');
 
+      setCreatedBookingSuccess({
+        id: newBookingId || 'SBK' + Math.floor(100000 + Math.random() * 900000),
+        providerPhone,
+        whatsappPhone,
+        serviceName: selectedService.serviceName,
+        providerName: selectedService.providerName
+      });
+
       if (bookingMode === 'call') {
-        // Open Tel dialer link with +91 format
-        window.location.href = `tel:+91${providerPhone}`;
+        try {
+          window.location.href = `tel:+91${providerPhone}`;
+        } catch (e) {
+          console.error(e);
+        }
       } else {
-        // Open WhatsApp chat link
-        const msg = `नमस्ते ${selectedService.providerName} जी! मैंने स्मार्ट बाजार ऐप से आपकी सर्विस "${selectedService.serviceName}" देखी है। कृपया मुझे संपर्क करें। (मेरा नंबर: ${cleanPhone}${customerName ? ', नाम: ' + customerName : ''})`;
-        window.open(`https://wa.me/91${whatsappPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        const msg = `नमस्ते ${selectedService.providerName} जी! मैंने स्मार्ट बाजार ऐप से आपकी सर्विस "${selectedService.serviceName}" देखी है। कृपया मुझसे संपर्क करें। (मेरा नंबर: ${cleanPhone}${customerName ? ', नाम: ' + customerName : ''})`;
+        try {
+          window.open(`https://wa.me/91${whatsappPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        } catch (e) {
+          console.error(e);
+        }
       }
 
-      // Close Modal
+      // Close Form Modal
       setSelectedService(null);
       setCustomerPhone('');
       setCustomerName('');
       setCustomerAddress('');
     } catch (err) {
       console.error('Error recording service booking:', err);
-      // Still open dialer or whatsapp even if save fails
       const providerPhone = selectedService.primaryPhone.trim().replace(/[^0-9]/g, '');
-      window.location.href = `tel:+91${providerPhone}`;
+      try {
+        window.location.href = `tel:+91${providerPhone}`;
+      } catch (e) {
+        console.error(e);
+      }
     } finally {
       setIsSubmittingBooking(false);
     }
@@ -780,6 +804,66 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                   )}
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SERVICE BOOKING SUCCESS MODAL */}
+      <AnimatePresence>
+        {createdBookingSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-stone-200 text-center space-y-4"
+            >
+              <div className="w-16 h-16 bg-emerald-100 border-2 border-emerald-400 rounded-full flex items-center justify-center text-emerald-700 mx-auto">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+
+              <div>
+                <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 rounded-full border border-emerald-300 mb-2">
+                  बुकिंग रिकॉर्ड सहेजा गया!
+                </span>
+                <h2 className="text-xl font-black text-stone-900">
+                  बुकिंग ID: #{createdBookingSuccess.id}
+                </h2>
+                <p className="text-stone-600 text-xs mt-1 font-medium">
+                  {createdBookingSuccess.serviceName} - {createdBookingSuccess.providerName}
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <a
+                  href={`tel:+91${createdBookingSuccess.providerPhone}`}
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-3 px-4 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 text-xs"
+                >
+                  <Phone className="w-4 h-4 fill-white" />
+                  <span>डायरेक्ट कॉल करें (+91 {createdBookingSuccess.providerPhone})</span>
+                </a>
+
+                <a
+                  href={`https://wa.me/91${createdBookingSuccess.whatsappPhone}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3 px-4 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 text-xs"
+                >
+                  <MessageCircle className="w-4 h-4 fill-white" />
+                  <span>WhatsApp पर चैट खोलें</span>
+                </a>
+
+                <button
+                  onClick={() => {
+                    setCreatedBookingSuccess(null);
+                    setActiveTab('my_bookings');
+                  }}
+                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-800 font-extrabold py-2.5 rounded-2xl text-xs mt-2 border border-stone-300"
+                >
+                  मेरी बुकिंग्स देखें (My Bookings)
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
