@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { UserRole } from '../types';
+import { UserRole, CustomerUser } from '../types';
 import { MadeInIndiaLogo } from './MadeInIndiaLogo';
 import { 
   Search,
   Sparkles,
   MoreHorizontal,
-  X
+  X,
+  UserCheck,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -17,6 +20,9 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   activeOrdersCount: number;
   onOpenOrdersTab?: () => void;
+  customerUser?: CustomerUser | null;
+  onOpenLoginModal?: () => void;
+  onCustomerLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,7 +33,10 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   activeOrdersCount,
-  onOpenOrdersTab
+  onOpenOrdersTab,
+  customerUser,
+  onOpenLoginModal,
+  onCustomerLogout
 }) => {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
@@ -35,6 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'customer', label: 'ग्राहक' },
     { id: 'vendor', label: 'दुकानदार' },
     { id: 'delivery', label: 'डिलीवरी' },
+    { id: 'service', label: 'सर्विस प्रदाता' },
     { id: 'admin', label: 'एडमिन' }
   ];
 
@@ -88,7 +98,32 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             {/* Right Side: Action Badges & Three Dots Button ONLY */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Customer Login / Account Badge */}
+              {currentRole === 'customer' && (
+                customerUser?.isLoggedIn ? (
+                  <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-300 text-emerald-950 px-2.5 py-1 rounded-full text-xs font-extrabold shadow-xs">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                    <span className="max-w-[80px] sm:max-w-[120px] truncate">{customerUser.name}</span>
+                    <button
+                      onClick={onCustomerLogout}
+                      title="लॉगआउट करें (Logout)"
+                      className="ml-1 p-0.5 text-rose-600 hover:text-rose-800 hover:bg-rose-100 rounded-full transition-colors"
+                    >
+                      <LogOut className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={onOpenLoginModal}
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-3 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition-all active:scale-95 shrink-0"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>लॉगिन</span>
+                  </button>
+                )
+              )}
+
               {/* Active Orders Quick Access Badge */}
               {currentRole === 'customer' && activeOrdersCount > 0 && (
                 <button

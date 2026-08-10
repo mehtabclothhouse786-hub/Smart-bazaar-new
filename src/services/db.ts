@@ -7,7 +7,9 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc, 
-  getDocs 
+  getDocs,
+  query,
+  where 
 } from '../firebase';
 import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking } from '../types';
 
@@ -53,7 +55,7 @@ export const SAMPLE_VENDORS: Vendor[] = [
     shopName: 'Mahtab Cloth House',
     ownerName: 'Mahtab Ahmed',
     username: 'mahtab',
-    password: 'mahtab123',
+    password: '12345',
     phone: '9876500001',
     category: 'कपड़े (Clothing)',
     status: 'active',
@@ -69,7 +71,7 @@ export const SAMPLE_VENDORS: Vendor[] = [
     shopName: 'Sharma Hardware Store',
     ownerName: 'Omprakash Sharma',
     username: 'sharma',
-    password: 'sharma123',
+    password: '12345',
     phone: '9876500002',
     category: 'हार्डवेयर (Hardware)',
     status: 'active',
@@ -85,7 +87,7 @@ export const SAMPLE_VENDORS: Vendor[] = [
     shopName: 'Bijnor Sanitary Center',
     ownerName: 'Ramesh Verma',
     username: 'bijnor',
-    password: 'bijnor123',
+    password: '12345',
     phone: '9876500003',
     category: 'सैनिटरी (Sanitaryware)',
     status: 'active',
@@ -192,7 +194,7 @@ export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [
     id: 'dp1',
     name: 'Rakesh Kumar',
     phone: '9876543210',
-    password: 'rakesh123',
+    password: '12345',
     vehicle: 'बाइक',
     status: 'Online',
     currentLocation: 'Chandpur',
@@ -207,7 +209,7 @@ export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [
     id: 'dp2',
     name: 'Suresh Yadav',
     phone: '9123456780',
-    password: 'suresh123',
+    password: '12345',
     vehicle: 'साइकिल',
     status: 'Online',
     currentLocation: 'Bijnor',
@@ -227,9 +229,15 @@ export function subscribeProducts(onUpdate: (products: Product[]) => void) {
     const colRef = collection(db, PRODUCTS_COL);
     return onSnapshot(colRef, (snapshot) => {
       if (snapshot.empty) {
-        // Auto seed sample products if database is empty
-        seedProducts();
+        const hasSeeded = localStorage.getItem('smart_bazaar_has_seeded_products');
+        if (!hasSeeded) {
+          seedProducts();
+        } else {
+          setLocalData(PRODUCTS_COL, []);
+          onUpdate([]);
+        }
       } else {
+        localStorage.setItem('smart_bazaar_has_seeded_products', 'true');
         const list: Product[] = snapshot.docs.map(docSnap => ({
           id: docSnap.id,
           ...docSnap.data()
@@ -318,12 +326,16 @@ export function subscribeDeliveryPartners(onUpdate: (partners: DeliveryPartner[]
 // Seed helper functions
 export async function seedProducts() {
   try {
-    for (const prod of SAMPLE_PRODUCTS) {
-      await addDoc(collection(db, PRODUCTS_COL), {
+    for (let i = 0; i < SAMPLE_PRODUCTS.length; i++) {
+      const prod = SAMPLE_PRODUCTS[i];
+      const prodId = prod.id || `prod_sample_${i + 1}`;
+      await setDoc(doc(db, PRODUCTS_COL, prodId), {
         ...prod,
+        id: prodId,
         createdAt: Date.now()
       });
     }
+    localStorage.setItem('smart_bazaar_has_seeded_products', 'true');
   } catch (e) {
     console.error('Error seeding products:', e);
   }
@@ -413,11 +425,23 @@ export async function deleteProductDoc(id: string) {
   try {
     await deleteDoc(doc(db, PRODUCTS_COL, id));
   } catch (e) {
-    console.error('Error deleting product doc:', e);
-    const current = getLocalData<Product[]>(PRODUCTS_COL, []);
-    const filtered = current.filter(p => p.id !== id);
-    setLocalData(PRODUCTS_COL, filtered);
+    console.error('Error deleting product doc by id:', e);
   }
+
+  try {
+    const q = query(collection(db, PRODUCTS_COL), where('id', '==', id));
+    const snap = await getDocs(q);
+    for (const docSnap of snap.docs) {
+      await deleteDoc(docSnap.ref);
+    }
+  } catch (e) {
+    console.error('Error deleting product doc query:', e);
+  }
+
+  // Always update local data backup
+  const current = getLocalData<Product[]>(PRODUCTS_COL, []);
+  const filtered = current.filter(p => p.id !== id);
+  setLocalData(PRODUCTS_COL, filtered);
 }
 
 export async function createOrderDoc(orderData: Omit<Order, 'id'>): Promise<string> {
@@ -761,5 +785,37 @@ export async function updateServiceBookingStatus(bookingId: string, status: 'Boo
     }
   }
 }
+
+export async function updateServiceBookingBill(
+  bookingId: string, 
+  materialCost: number, 
+  visitFee: number = 100
+) {
+  const subtotal = visitFee + materialCost;
+  const platformFee = Math.round(subtotal * 0.10); // 10%
+  const finalBillAmount = subtotal + platformFee;
+  const updates: Partial<ServiceBooking> = {
+    visitFee,
+    materialCost,
+    subtotal,
+    platformFee,
+    finalBillAmount,
+    billGeneratedAt: Date.now(),
+    status: 'Completed'
+  };
+
+  try {
+    await updateDoc(doc(db, SERVICE_BOOKINGS_COL, bookingId), updates);
+  } catch (e) {
+    console.error('Error updating service booking bill:', e);
+    const current = getLocalData<ServiceBooking[]>(SERVICE_BOOKINGS_COL, []);
+    const idx = current.findIndex(b => b.id === bookingId);
+    if (idx !== -1) {
+      current[idx] = { ...current[idx], ...updates };
+      setLocalData(SERVICE_BOOKINGS_COL, current);
+    }
+  }
+}
+
 
 

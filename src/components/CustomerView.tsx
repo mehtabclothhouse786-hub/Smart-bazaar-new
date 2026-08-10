@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product, CartItem, Order, Vendor, ServiceProvider, ServiceBooking } from '../types';
+import { Product, CartItem, Order, Vendor, ServiceProvider, ServiceBooking, CustomerUser } from '../types';
 import { 
   Plus, 
   Minus, 
@@ -20,7 +20,8 @@ import {
   Upload,
   MessageCircle,
   ExternalLink,
-  Wrench
+  Wrench,
+  LogIn
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SMART_DELIVERY_UPI } from '../services/db';
@@ -58,6 +59,8 @@ interface CustomerViewProps {
   isCartOpen?: boolean;
   onCloseCart?: () => void;
   onOpenCart?: () => void;
+  customerUser?: CustomerUser | null;
+  onRequireLogin?: (actionCallback: () => void, promptText?: string) => void;
 }
 
 export const CustomerView: React.FC<CustomerViewProps> = ({
@@ -79,7 +82,9 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   onCreateBooking = async () => '',
   isCartOpen = false,
   onCloseCart,
-  onOpenCart
+  onOpenCart,
+  customerUser,
+  onRequireLogin
 }) => {
   const [customerShopView, setCustomerShopView] = useState<'list' | 'catalog'>('list');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
@@ -95,10 +100,33 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // Helper to ensure customer is logged in before executing an action
+  const guardAction = (action: () => void, promptText?: string) => {
+    if (customerUser?.isLoggedIn) {
+      action();
+    } else if (onRequireLogin) {
+      onRequireLogin(action, promptText);
+    } else {
+      action();
+    }
+  };
+
+  // Sync customer details when customerUser becomes available
+  React.useEffect(() => {
+    if (customerUser?.isLoggedIn) {
+      if (customerUser.name) setCustomerName(customerUser.name);
+      if (customerUser.phone) setCustomerPhone(customerUser.phone);
+    }
+  }, [customerUser]);
+
   // Sync external isCartOpen with local modal state
   React.useEffect(() => {
     if (isCartOpen) {
-      setIsCheckoutModalOpen(true);
+      if (!customerUser?.isLoggedIn && onRequireLogin) {
+        onRequireLogin(() => setIsCheckoutModalOpen(true), 'कार्ट देखने और ऑर्डर पूरा करने के लिए लॉगिन करें');
+      } else {
+        setIsCheckoutModalOpen(true);
+      }
     }
   }, [isCartOpen]);
 
@@ -256,6 +284,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           onDeleteService={onDeleteService}
           onCreateBooking={onCreateBooking}
           isProviderView={false}
+          customerUser={customerUser}
+          onRequireLogin={onRequireLogin}
         />
       ) : activeTab === 'shop' ? (
         <>
@@ -420,7 +450,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                             {cartItem ? (
                               <div className="inline-flex items-center bg-emerald-50 border border-emerald-300 rounded-xl overflow-hidden">
                                 <button
-                                  onClick={() => onUpdateCartQty(product.id, -1)}
+                                  onClick={() => guardAction(() => onUpdateCartQty(product.id, -1), 'कार्ट में बदलाव करने के लिए लॉगिन करें')}
                                   className="px-2.5 py-1 text-emerald-800 font-extrabold hover:bg-emerald-200"
                                 >
                                   −
@@ -429,7 +459,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                                   {cartItem.quantity}
                                 </span>
                                 <button
-                                  onClick={() => onUpdateCartQty(product.id, 1)}
+                                  onClick={() => guardAction(() => onUpdateCartQty(product.id, 1), 'कार्ट में बदलाव करने के लिए लॉगिन करें')}
                                   className="px-2.5 py-1 text-emerald-800 font-extrabold hover:bg-emerald-200"
                                 >
                                   +
@@ -438,15 +468,17 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                             ) : (
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => onAddToCart(product)}
+                                  onClick={() => guardAction(() => onAddToCart(product), 'कार्ट में प्रोडक्ट जोड़ने के लिए लॉगिन करें')}
                                   className="bg-amber-400 hover:bg-amber-500 text-stone-950 font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
                                 >
                                   कार्ट में जोड़ें
                                 </button>
                                 <button
                                   onClick={() => {
-                                    onAddToCart(product);
-                                    setIsCheckoutModalOpen(true);
+                                    guardAction(() => {
+                                      onAddToCart(product);
+                                      setIsCheckoutModalOpen(true);
+                                    }, 'प्रोडक्ट ऑर्डर करने के लिए लॉगिन करें');
                                   }}
                                   className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
                                 >
@@ -772,7 +804,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
             </div>
 
             <button
-              onClick={() => setIsCheckoutModalOpen(true)}
+              onClick={() => guardAction(() => setIsCheckoutModalOpen(true), 'ऑर्डर पूरा करने के लिए लॉगिन करें')}
               className="bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-2xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
             >
               <span>ऑर्डर / बुक करें</span>

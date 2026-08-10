@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ServiceProvider, ServiceBooking } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ServiceProvider, ServiceBooking, CustomerUser } from '../types';
+import { updateServiceBookingBill } from '../services/db';
 import { 
   Phone, 
   MessageCircle, 
@@ -19,7 +20,19 @@ import {
   ShieldCheck,
   Building2,
   Trash2,
-  PhoneCall
+  PhoneCall,
+  LogIn,
+  LogOut,
+  Lock,
+  KeyRound,
+  UserPlus,
+  Receipt,
+  Calculator,
+  Percent,
+  Share2,
+  Send,
+  DollarSign,
+  Pencil
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -30,6 +43,8 @@ interface ServicesPanelProps {
   onDeleteService?: (serviceId: string) => Promise<void>;
   onCreateBooking: (booking: Omit<ServiceBooking, 'id'>) => Promise<string>;
   isProviderView?: boolean;
+  customerUser?: CustomerUser | null;
+  onRequireLogin?: (actionCallback: () => void, promptText?: string) => void;
 }
 
 const CATEGORIES = [
@@ -43,13 +58,35 @@ const CATEGORIES = [
   { name: 'अन्य', icon: UserCheck }
 ];
 
+export const getServiceCategoryBadge = (category: string = '') => {
+  const cat = category.toLowerCase();
+  if (cat.includes('इलेक्ट्रिशियन') || cat.includes('electrician') || cat.includes('बिजली') || cat.includes('ac')) {
+    return { icon: Zap, bg: 'bg-amber-100 border-amber-300 text-amber-800' };
+  }
+  if (cat.includes('डॉक्टर') || cat.includes('doctor') || cat.includes('क्लीनिक')) {
+    return { icon: Stethoscope, bg: 'bg-rose-100 border-rose-300 text-rose-800' };
+  }
+  if (cat.includes('ब्यूटी') || cat.includes('beauty') || cat.includes('पार्लर') || cat.includes('ब्यूटीशियन')) {
+    return { icon: Sparkles, bg: 'bg-pink-100 border-pink-300 text-pink-800' };
+  }
+  if (cat.includes('कारपेंटर') || cat.includes('carpenter') || cat.includes('बढ़ई')) {
+    return { icon: Building2, bg: 'bg-orange-100 border-orange-300 text-orange-800' };
+  }
+  if (cat.includes('प्लंबर') || cat.includes('plumber') || cat.includes('नल')) {
+    return { icon: Wrench, bg: 'bg-blue-100 border-blue-300 text-blue-800' };
+  }
+  return { icon: Wrench, bg: 'bg-teal-100 border-teal-300 text-teal-800' };
+};
+
 export const ServicesPanel: React.FC<ServicesPanelProps> = ({
   services = [],
   serviceBookings = [],
   onAddService,
   onDeleteService,
   onCreateBooking,
-  isProviderView = false
+  isProviderView = false,
+  customerUser,
+  onRequireLogin
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('सभी');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -72,10 +109,20 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
     providerName: string;
   } | null>(null);
 
+  // Auto pre-fill customer name and phone when customerUser is available
+  useEffect(() => {
+    if (customerUser?.isLoggedIn) {
+      if (customerUser.name) setCustomerName(customerUser.name);
+      if (customerUser.phone) setCustomerPhone(customerUser.phone);
+    }
+  }, [customerUser]);
+
   // Add Service Form State
   const [newProviderName, setNewProviderName] = useState<string>('');
   const [newServiceName, setNewServiceName] = useState<string>('');
   const [newCategory, setNewCategory] = useState<string>('प्लंबर');
+  const [isCustomServiceCategory, setIsCustomServiceCategory] = useState<boolean>(false);
+  const [customServiceCategoryInput, setCustomServiceCategoryInput] = useState<string>('');
   const [newDescription, setNewDescription] = useState<string>('');
   const [newPrimaryPhone, setNewPrimaryPhone] = useState<string>('');
   const [newWhatsappPhone, setNewWhatsappPhone] = useState<string>('');
@@ -83,6 +130,62 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
   const [newExperience, setNewExperience] = useState<number>(3);
   const [newImageUrl, setNewImageUrl] = useState<string>('');
   const [isSubmittingService, setIsSubmittingService] = useState<boolean>(false);
+
+  // Billing State for Service Providers
+  const [billingLeadId, setBillingLeadId] = useState<string | null>(null);
+  const [materialCostInput, setMaterialCostInput] = useState<string>('');
+  const [isSavingBill, setIsSavingBill] = useState<boolean>(false);
+
+  // Bill Handlers
+  const handleOpenBillForm = (lead: ServiceBooking) => {
+    setBillingLeadId(lead.id);
+    setMaterialCostInput(lead.materialCost !== undefined ? String(lead.materialCost) : '');
+  };
+
+  const handleSaveServiceBill = async (bookingId: string) => {
+    setIsSavingBill(true);
+    try {
+      const numMat = Math.max(0, Number(materialCostInput) || 0);
+      await updateServiceBookingBill(bookingId, numMat, 100);
+      setBillingLeadId(null);
+      setMaterialCostInput('');
+      alert('✅ ग्राहक का सर्विस बिल (₹100 Per Call + सामान + 10% मार्जिन) सफलतापूर्वक जनरेट हो गया!');
+    } catch (err) {
+      console.error('Error saving service bill:', err);
+      alert('बिल सहेजने में त्रुटि हुई।');
+    } finally {
+      setIsSavingBill(false);
+    }
+  };
+
+  const handleShareBillWhatsApp = (lead: ServiceBooking) => {
+    const visit = lead.visitFee || 100;
+    const mat = lead.materialCost || 0;
+    const sub = lead.subtotal || (visit + mat);
+    const fee = lead.platformFee || Math.round(sub * 0.10);
+    const total = lead.finalBillAmount || (sub + fee);
+
+    const text = `🧾 *स्मार्ट बाजार - सर्विस बिल रसीद*
+------------------------------
+📌 *बुकिंग ID:* #${lead.id}
+🔧 *सर्विस:* ${lead.serviceName}
+👨‍🔧 *सर्विस प्रदाता:* ${lead.providerName}
+📱 *ग्राहक नंबर:* +91 ${lead.customerPhone}
+------------------------------
+1️⃣ कॉल/विजिट चार्ज (Per Call): ₹${visit}
+2️⃣ सामान/पार्ट्स खर्च: ₹${mat}
+------------------------------
+*सबटोटल (Subtotal):* ₹${sub}
+3️⃣ स्मार्ट बाजार 10% सर्विस चार्ज (+10%): ₹${fee}
+==============================
+💰 *कुल ग्राहक देय बिल (Final Bill): ₹${total}*
+==============================
+धन्यवाद! स्मार्ट बाजार सर्विसेज (Made in India)`;
+
+    const cleanPhone = lead.customerPhone.replace(/[^0-9]/g, '');
+    const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
   // Filter Services
   const filteredServices = services.filter(s => {
@@ -98,6 +201,13 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
 
   // Handle Booking Trigger (Call or WhatsApp)
   const handleOpenBookingModal = (service: ServiceProvider, mode: 'call' | 'whatsapp') => {
+    if (!customerUser?.isLoggedIn && onRequireLogin) {
+      onRequireLogin(() => {
+        setSelectedService(service);
+        setBookingMode(mode);
+      }, 'सर्विस बुक करने या तकनीशियन से संपर्क करने के लिए लॉगिन करें');
+      return;
+    }
     setSelectedService(service);
     setBookingMode(mode);
   };
@@ -183,10 +293,11 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
 
     setIsSubmittingService(true);
     try {
+      const finalCategory = isCustomServiceCategory ? (customServiceCategoryInput.trim() || 'अन्य') : newCategory;
       await onAddService({
         providerName: newProviderName.trim(),
         serviceName: newServiceName.trim(),
-        category: newCategory,
+        category: finalCategory,
         description: newDescription.trim(),
         primaryPhone: cleanPhone,
         whatsappPhone: newWhatsappPhone.trim() ? newWhatsappPhone.trim().replace(/[^0-9]/g, '') : cleanPhone,
@@ -217,6 +328,39 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
   return (
     <div className="space-y-6">
       
+      {/* Service Provider Portal Header Badge (When in Provider View) */}
+      {isProviderView && (
+        <div className="bg-white border-2 border-amber-300 rounded-3xl p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-stone-950 font-black shadow-xs shrink-0">
+                <Wrench className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-extrabold text-stone-900 text-base sm:text-lg">सर्विस प्रदाता पोर्टल (Service Provider View)</h2>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-300">
+                    सक्रिय (Active)
+                  </span>
+                </div>
+                <p className="text-stone-500 text-xs mt-0.5">तकनीशियन, प्लंबर, इलेक्ट्रिशियन व सर्विस लीड्स मैनेजमेंट</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('add_service')}
+                className="bg-amber-400 hover:bg-amber-500 text-stone-950 font-extrabold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ नई सर्विस जोड़ें</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Services Header Banner */}
       <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-950 rounded-3xl p-5 sm:p-6 text-white shadow-md relative overflow-hidden">
         <div className="relative z-10 max-w-xl">
@@ -342,11 +486,14 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                   className="bg-white border border-stone-200 rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden"
                 >
                   <div className="flex items-start gap-3">
-                    <img
-                      src={service.imageUrl || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500'}
-                      alt={service.providerName}
-                      className="w-16 h-16 rounded-2xl object-cover bg-stone-100 border border-stone-200 shrink-0"
-                    />
+                    {(() => {
+                      const { icon: ServiceIcon, bg } = getServiceCategoryBadge(service.category);
+                      return (
+                        <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${bg} border flex items-center justify-center shrink-0 shadow-2xs`}>
+                          <ServiceIcon className="w-7 h-7 sm:w-8 sm:h-8" />
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
@@ -447,32 +594,57 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
           ) : (
             <div className="space-y-3">
               {serviceBookings.map((bk) => (
-                <div key={bk.id} className="bg-white border border-stone-200 rounded-3xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-black text-stone-900">
-                        #{bk.id}
-                      </span>
-                      <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                        {bk.status}
-                      </span>
+                <div key={bk.id} className="bg-white border border-stone-200 rounded-3xl p-4 shadow-sm space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-black text-stone-900">
+                          #{bk.id}
+                        </span>
+                        <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                          {bk.status}
+                        </span>
+                        {bk.finalBillAmount && (
+                          <span className="text-[10px] font-black uppercase text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                            कुल बिल: ₹{bk.finalBillAmount}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-extrabold text-stone-900 text-sm mt-1">{bk.serviceName}</h4>
+                      <div className="text-xs text-stone-600 font-medium">
+                        प्रोवाइडर: {bk.providerName} ({bk.providerPhone})
+                      </div>
+                      <div className="text-[11px] text-stone-400 mt-0.5">
+                        तारीख: {new Date(bk.createdAt).toLocaleString('hi-IN')}
+                      </div>
                     </div>
-                    <h4 className="font-extrabold text-stone-900 text-sm mt-1">{bk.serviceName}</h4>
-                    <div className="text-xs text-stone-600 font-medium">
-                      प्रोवाइडर: {bk.providerName} ({bk.providerPhone})
-                    </div>
-                    <div className="text-[11px] text-stone-400 mt-0.5">
-                      तारीख: {new Date(bk.createdAt).toLocaleString('hi-IN')}
-                    </div>
+
+                    <a
+                      href={`tel:+91${bk.providerPhone.replace(/[^0-9]/g, '')}`}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-4 py-2 rounded-2xl flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>कॉल करें</span>
+                    </a>
                   </div>
 
-                  <a
-                    href={`tel:+91${bk.providerPhone.replace(/[^0-9]/g, '')}`}
-                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-4 py-2 rounded-2xl flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span>कॉल करें</span>
-                  </a>
+                  {bk.finalBillAmount && (
+                    <div className="bg-emerald-50/90 border border-emerald-300 rounded-2xl p-3 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between font-black text-emerald-950 border-b border-emerald-200 pb-1">
+                        <span className="flex items-center gap-1">
+                          <Receipt className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>सर्विस बिल रसीद (Per Call ₹100 + सामान + 10% शुल्क)</span>
+                        </span>
+                        <span className="text-emerald-800 font-extrabold text-sm">₹{bk.finalBillAmount}</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-stone-700 font-semibold text-[11px] pt-1">
+                        <div>• कॉल/विजिट: ₹{bk.visitFee || 100}</div>
+                        <div>• सामान/पार्ट्स: ₹{bk.materialCost || 0}</div>
+                        <div>• 10% सेवा शुल्क: ₹{bk.platformFee || Math.round(((bk.visitFee || 100) + (bk.materialCost || 0)) * 0.10)}</div>
+                        <div className="font-black text-emerald-900">• कुल देय: ₹{bk.finalBillAmount}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -524,23 +696,54 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-extrabold text-stone-800 mb-1">
-                  कैटेगरी चुनें <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={newCategory}
-                  onChange={e => setNewCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="प्लंबर">प्लंबर (Plumber)</option>
-                  <option value="इलेक्ट्रिशियन">इलेक्ट्रिशियन (Electrician)</option>
-                  <option value="डॉक्टर">डॉक्टर (Doctor)</option>
-                  <option value="ब्यूटी पार्लर">ब्यूटी पार्लर (Beauty Parlor)</option>
-                  <option value="तकनीशियन">तकनीशियन (Technician)</option>
-                  <option value="कारपेंटर">कारपेंटर (Carpenter)</option>
-                  <option value="पेंटर">पेंटर (Painter)</option>
-                  <option value="अन्य">अन्य (Other)</option>
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-extrabold text-stone-800">
+                    कैटेगरी चुनें <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomServiceCategory(!isCustomServiceCategory);
+                      if (!isCustomServiceCategory) setCustomServiceCategoryInput('');
+                    }}
+                    className="text-[11px] font-extrabold text-blue-700 hover:text-blue-900 underline flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <Pencil className="w-3 h-3 text-blue-600" />
+                    <span>{isCustomServiceCategory ? 'सूची से चुनें' : '✏️ एडिट/कस्टम'}</span>
+                  </button>
+                </div>
+
+                {!isCustomServiceCategory ? (
+                  <select
+                    value={newCategory}
+                    onChange={e => {
+                      if (e.target.value === 'अन्य' || e.target.value === '__custom__') {
+                        setIsCustomServiceCategory(true);
+                      } else {
+                        setNewCategory(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="प्लंबर">प्लंबर (Plumber)</option>
+                    <option value="इलेक्ट्रिशियन">इलेक्ट्रिशियन (Electrician)</option>
+                    <option value="डॉक्टर">डॉक्टर (Doctor)</option>
+                    <option value="ब्यूटी पार्लर">ब्यूटी पार्लर (Beauty Parlor)</option>
+                    <option value="तकनीशियन">तकनीशियन (Technician)</option>
+                    <option value="कारपेंटर">कारपेंटर (Carpenter)</option>
+                    <option value="पेंटर">पेंटर (Painter)</option>
+                    <option value="अन्य">✏️ + अन्य / न्यू कस्टम श्रेणी दर्ज करें (Custom)</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={customServiceCategoryInput}
+                    onChange={e => setCustomServiceCategoryInput(e.target.value)}
+                    placeholder="उदा: टेलर / सिक्योरिटी गॉर्ड / कुक"
+                    className="w-full px-3.5 py-2.5 bg-amber-50 border-2 border-amber-400 rounded-2xl text-xs font-extrabold outline-none text-stone-900 focus:ring-2 focus:ring-amber-500"
+                  />
+                )}
               </div>
 
               <div>
@@ -625,19 +828,6 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-extrabold text-stone-800 mb-1">
-                फोटो URL (Image Link optional)
-              </label>
-              <input
-                type="url"
-                value={newImageUrl}
-                onChange={e => setNewImageUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-2xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
             <button
               type="submit"
               disabled={isSubmittingService}
@@ -669,36 +859,211 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
               <p className="text-stone-500 text-xs">ग्राहकों के कॉल करते ही उनकी जानकारी यहाँ दिखाई देगी।</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {serviceBookings.map((lead) => (
-                <div key={lead.id} className="bg-white border border-stone-200 rounded-3xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full">
-                      ग्राहक लीड
-                    </span>
-                    <h4 className="font-extrabold text-stone-900 text-sm mt-1">
-                      ग्राहक का नाम: {lead.customerName || 'अज्ञात ग्राहक'}
-                    </h4>
-                    <div className="text-xs font-mono font-bold text-emerald-800">
-                      मोबाइल नंबर: +91 {lead.customerPhone}
-                    </div>
-                    <div className="text-xs text-stone-500 mt-0.5">
-                      सर्विस: {lead.serviceName}
-                    </div>
-                    <div className="text-[10px] text-stone-400">
-                      समय: {new Date(lead.createdAt).toLocaleString('hi-IN')}
-                    </div>
-                  </div>
+            <div className="space-y-4">
+              {serviceBookings.map((lead) => {
+                const isFormOpen = billingLeadId === lead.id;
+                const numMat = Math.max(0, Number(materialCostInput) || 0);
+                const visit = 100;
+                const calcSub = visit + numMat;
+                const calcFee = Math.round(calcSub * 0.10);
+                const calcTotal = calcSub + calcFee;
 
-                  <a
-                    href={`tel:+91${lead.customerPhone.replace(/[^0-9]/g, '')}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Phone className="w-4 h-4 fill-white" />
-                    <span>ग्राहक को कॉल करें</span>
-                  </a>
-                </div>
-              ))}
+                return (
+                  <div key={lead.id} className="bg-white border border-stone-200 rounded-3xl p-4.5 shadow-sm space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full">
+                            ग्राहक लीड #{lead.id}
+                          </span>
+                          {lead.finalBillAmount && (
+                            <span className="text-[10px] font-black uppercase text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                              ✅ कुल बिल: ₹{lead.finalBillAmount}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-extrabold text-stone-900 text-sm mt-1">
+                          ग्राहक नाम: {lead.customerName || 'अज्ञात ग्राहक'}
+                        </h4>
+                        <div className="text-xs font-mono font-bold text-emerald-800">
+                          मोबाइल नंबर: +91 {lead.customerPhone}
+                        </div>
+                        {lead.address && (
+                          <div className="text-xs text-stone-600 mt-0.5 font-medium">
+                            पता / टिप्पणी: {lead.address}
+                          </div>
+                        )}
+                        <div className="text-xs text-stone-500 mt-0.5">
+                          सर्विस: {lead.serviceName}
+                        </div>
+                        <div className="text-[10px] text-stone-400">
+                          समय: {new Date(lead.createdAt).toLocaleString('hi-IN')}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <a
+                          href={`tel:+91${lead.customerPhone.replace(/[^0-9]/g, '')}`}
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-xs"
+                        >
+                          <Phone className="w-4 h-4 fill-white" />
+                          <span>कॉल करें</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenBillForm(lead)}
+                          className="bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs px-3.5 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                        >
+                          <Receipt className="w-4 h-4" />
+                          <span>{lead.finalBillAmount ? 'बिल संशोधित करें' : '🧾 बिल जनरेट करें (+10%)'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* GENERATED BILL SUMMARY INVOICE (when bill exists) */}
+                    {lead.finalBillAmount && !isFormOpen && (
+                      <div className="bg-emerald-50/90 border-2 border-emerald-300 rounded-2xl p-3.5 space-y-2 text-xs">
+                        <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                          <span className="font-black text-emerald-950 flex items-center gap-1 text-xs sm:text-sm">
+                            <Receipt className="w-4 h-4 text-emerald-700" />
+                            <span>स्मार्ट बाजार - फाइनल ग्राहक बिल रसीद</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleShareBillWhatsApp(lead)}
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[11px] px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-xs cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>WhatsApp रसीद भेजें</span>
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-stone-700 font-semibold pt-1">
+                          <div className="bg-white/90 p-2 rounded-xl border border-emerald-200 shadow-2xs">
+                            <span className="text-[10px] text-stone-500 block">1. कॉल/विजिट शुल्क</span>
+                            <span className="font-extrabold text-stone-900 text-xs">₹{lead.visitFee || 100}</span>
+                          </div>
+                          <div className="bg-white/90 p-2 rounded-xl border border-emerald-200 shadow-2xs">
+                            <span className="text-[10px] text-stone-500 block">2. सामान/पार्ट्स खर्च</span>
+                            <span className="font-extrabold text-stone-900 text-xs">₹{lead.materialCost || 0}</span>
+                          </div>
+                          <div className="bg-white/90 p-2 rounded-xl border border-emerald-200 shadow-2xs">
+                            <span className="text-[10px] text-stone-500 block">3. 10% मार्जिन शुल्क</span>
+                            <span className="font-extrabold text-emerald-800 text-xs">₹{lead.platformFee || Math.round(((lead.visitFee || 100) + (lead.materialCost || 0)) * 0.10)}</span>
+                          </div>
+                          <div className="bg-emerald-700 text-white p-2 rounded-xl shadow-xs">
+                            <span className="text-[10px] text-emerald-100 block font-bold">कुल देय ग्राहक बिल</span>
+                            <span className="font-black text-sm sm:text-base">₹{lead.finalBillAmount}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* BILL GENERATION FORM SECTION */}
+                    {isFormOpen && (
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 space-y-3 animate-fadeIn">
+                        <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+                          <div className="flex items-center gap-2">
+                            <Calculator className="w-5 h-5 text-amber-700" />
+                            <h4 className="font-black text-amber-950 text-sm">
+                              सर्विस बिल सेक्शन (Per Call ₹100 + सामान का बिल + 10%)
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setBillingLeadId(null)}
+                            className="text-stone-400 hover:text-stone-700 p-1 rounded-lg"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                            <label className="block text-[11px] font-black text-stone-700 mb-1">
+                              1. कॉल / विजिट शुल्क (Fixed)
+                            </label>
+                            <div className="text-base font-black text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                              ₹100 <span className="text-[10px] font-medium text-stone-500">(प्रति कॉल विजिट)</span>
+                            </div>
+                          </div>
+
+                          <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                            <label className="block text-[11px] font-black text-amber-950 mb-1">
+                              2. सामान / स्पेयर पार्ट्स का बिल (₹) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={materialCostInput}
+                              onChange={e => setMaterialCostInput(e.target.value)}
+                              placeholder="उदा: 350 (सामान का कुल खर्च भरें)"
+                              className="w-full px-3 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-extrabold outline-none focus:ring-2 focus:ring-amber-500"
+                            />
+                            <span className="text-[10px] text-stone-500 font-semibold block mt-1">
+                              केवल सामान/सामग्री का बिल भरें, 10% शुल्क ऑटोमैटिक जुड़ेगा।
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* LIVE AUTOMATIC BILL CALCULATOR PREVIEW */}
+                        <div className="bg-stone-900 text-white rounded-xl p-3.5 space-y-2 text-xs">
+                          <div className="text-[11px] font-bold text-amber-400 flex items-center justify-between border-b border-stone-800 pb-1.5">
+                            <span>ऑटोमैटिक बिल कैलकुलेशन (Auto Invoice Preview):</span>
+                            <span className="bg-amber-400 text-stone-950 px-2 py-0.5 rounded-md font-black text-[10px]">
+                              10% Margin Added
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 font-mono text-stone-300">
+                            <div className="flex justify-between">
+                              <span>• विजिट कॉल शुल्क (Visit Fee):</span>
+                              <span>₹{visit}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>• सामान / पार्ट्स खर्च (Material):</span>
+                              <span>₹{numMat}</span>
+                            </div>
+                            <div className="flex justify-between text-stone-400 border-t border-stone-800 pt-1">
+                              <span>• सबटोटल (Subtotal):</span>
+                              <span>₹{calcSub}</span>
+                            </div>
+                            <div className="flex justify-between text-emerald-400 font-bold">
+                              <span>• स्मार्ट बाजार 10% सेवा शुल्क (+10%):</span>
+                              <span>+ ₹{calcFee}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between border-t-2 border-amber-400/50 pt-2 text-amber-300 text-sm font-black">
+                            <span>कुल ग्राहक देय बिल (Final Customer Bill):</span>
+                            <span className="text-lg text-amber-400 font-black">₹{calcTotal}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setBillingLeadId(null)}
+                            className="px-3.5 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-xs rounded-xl cursor-pointer"
+                          >
+                            रद्द करें
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSavingBill}
+                            onClick={() => handleSaveServiceBill(lead.id)}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>{isSavingBill ? 'सहेजा जा रहा है...' : '✅ बिल जनरेट व सेव करें'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

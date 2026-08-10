@@ -10,6 +10,7 @@ import {
   deleteDoc, 
   getDocs,
   query,
+  where,
   orderBy,
   serverTimestamp 
 } from 'firebase/firestore';
@@ -41,6 +42,7 @@ export {
   deleteDoc, 
   getDocs,
   query,
+  where,
   orderBy,
   serverTimestamp,
   firebaseConfigData

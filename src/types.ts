@@ -1,4 +1,13 @@
-export type UserRole = 'customer' | 'vendor' | 'admin' | 'delivery';
+export type UserRole = 'customer' | 'vendor' | 'delivery' | 'service' | 'admin';
+
+export interface CustomerUser {
+  id: string;
+  name: string;
+  phone: string;
+  address?: string;
+  isLoggedIn: boolean;
+  createdAt?: number;
+}
 
 export interface Product {
   id: string;
@@ -133,5 +142,11 @@ export interface ServiceBooking {
   notes?: string;
   status: 'Booked / Contacted' | 'Completed' | 'Cancelled';
   createdAt: number;
+  visitFee?: number; // Per call fee (Fixed ₹100)
+  materialCost?: number; // सामान/पार्ट्स खर्च (Fill by Provider)
+  subtotal?: number; // visitFee + materialCost
+  platformFee?: number; // 10% platform charge
+  finalBillAmount?: number; // Total customer bill
+  billGeneratedAt?: number;
 }
 

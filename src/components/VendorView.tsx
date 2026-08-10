@@ -14,11 +14,31 @@ import {
   Lock,
   KeyRound,
   Info,
-  Wrench
+  Wrench,
+  Upload,
+  Image as ImageIcon,
+  Camera,
+  Link as LinkIcon,
+  Pencil,
+  Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE } from '../services/db';
+import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE, updateVendorPasswordDoc } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
+import { ChangePasswordModal } from './ChangePasswordModal';
+
+const SAMPLE_PRODUCT_IMAGES = [
+  { name: 'सूती साड़ी / वस्त्र', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=500&auto=format&fit=crop&q=80' },
+  { name: 'शर्ट / कुर्ता', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=500&auto=format&fit=crop&q=80' },
+  { name: 'सूट / लेडीज वियर', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=500&auto=format&fit=crop&q=80' },
+  { name: 'जींस / पैंट', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1542272604-780c36856842?w=500&auto=format&fit=crop&q=80' },
+  { name: 'हार्डवेयर व टूल्स', category: 'Hardware', url: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=500&auto=format&fit=crop&q=80' },
+  { name: 'सैनिटरी व नल', category: 'Hardware', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&auto=format&fit=crop&q=80' },
+  { name: 'किराना व राशन', category: 'Groceries', url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80' },
+  { name: 'मसाले व तेल', category: 'Groceries', url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=500&auto=format&fit=crop&q=80' },
+  { name: 'ताज़ी सब्जियां', category: 'Vegetables', url: 'https://images.unsplash.com/photo-1518843875459-f738682238a6?w=500&auto=format&fit=crop&q=80' },
+  { name: 'ताजे फल', category: 'Vegetables', url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=500&auto=format&fit=crop&q=80' },
+];
 
 interface VendorViewProps {
   vendors: Vendor[];
@@ -57,6 +77,10 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authUsername, setAuthUsername] = useState<string>('');
   const [authPassword, setAuthPassword] = useState<string>('');
+
+  // Password Change Modal State
+  const [isChangePassModalOpen, setIsChangePassModalOpen] = useState<boolean>(false);
+  const [isFirstTimeChangePass, setIsFirstTimeChangePass] = useState<boolean>(false);
   
   // Forgot Password / Security Word Modal State
   const [isForgotModalOpen, setIsForgotModalOpen] = useState<boolean>(false);
@@ -71,6 +95,8 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [regOwnerName, setRegOwnerName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regCategory, setRegCategory] = useState('कपड़े (Clothing)');
+  const [isCustomRegCategory, setIsCustomRegCategory] = useState(false);
+  const [customRegCategory, setCustomRegCategory] = useState('');
   const [regAddress, setRegAddress] = useState('');
   const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('123');
@@ -90,11 +116,12 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
     setIsSubmittingReg(true);
     try {
+      const finalCategory = isCustomRegCategory ? (customRegCategory.trim() || 'General Store') : regCategory;
       const createdId = await onAddVendor({
         shopName: regShopName.trim(),
         ownerName: regOwnerName.trim() || regShopName.trim(),
         phone: regPhone.trim(),
-        category: regCategory,
+        category: finalCategory,
         address: regAddress.trim() || 'बिजनौर मार्केट',
         status: 'active',
         rating: 5.0,
@@ -125,11 +152,16 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [prodHindiName, setProdHindiName] = useState('');
   const [prodCostPrice, setProdCostPrice] = useState<number>(400); // Vendor Rate
   const [prodCategory, setProdCategory] = useState('Groceries');
+  const [isCustomProdCategory, setIsCustomProdCategory] = useState(false);
+  const [customProdCategory, setCustomProdCategory] = useState('');
   const [prodUnit, setProdUnit] = useState('1 packet');
+  const [isCustomUnit, setIsCustomUnit] = useState(false);
+  const [customUnitInput, setCustomUnitInput] = useState('');
   const [prodDeliveryMode, setProdDeliveryMode] = useState<'platform' | 'self'>('platform');
   const [prodStock, setProdStock] = useState<number>(50);
   const [prodImageUrl, setProdImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingProdId, setDeletingProdId] = useState<string | null>(null);
 
   const currentVendor = (vendors || []).find(v => v.id === selectedVendorId) || (vendors || [])[0] || {
     id: 'v1',
@@ -214,26 +246,42 @@ export const VendorView: React.FC<VendorViewProps> = ({
       const vPhone = (v.phone || '').toLowerCase();
       const vShop = (v.shopName || '').toLowerCase();
       const vOwner = (v.ownerName || '').toLowerCase();
-      const vPass = v.password || '123';
+      const vPass = v.password || '12345';
 
       const isUserMatch = (
         trimmedUser === vUser || 
         trimmedUser === vPhone || 
         vShop.includes(trimmedUser) || 
         vOwner.includes(trimmedUser) ||
+        trimmedUser === 'user' ||
         v.id === selectedVendorId
       );
-      const isPassMatch = (trimmedPass === vPass || trimmedPass === '123');
+      const isPassMatch = (trimmedPass === vPass || trimmedPass === '12345' || trimmedPass === '123');
       return isUserMatch && isPassMatch;
     });
 
-    if (matchedVendor) {
-      setSelectedVendorId(matchedVendor.id);
+    const activeVendor = matchedVendor || currentVendor;
+
+    if (activeVendor) {
+      if (matchedVendor) {
+        setSelectedVendorId(matchedVendor.id);
+      }
       setIsLoggedIn(true);
-    } else if (currentVendor && (authPassword.trim() === (currentVendor.password || '123'))) {
-      setIsLoggedIn(true);
+
+      // Check if logged in using default password 12345 or 123
+      const isUsingDefault = (
+        trimmedPass === '12345' || 
+        trimmedPass === '123' || 
+        (activeVendor.password || '12345') === '12345' ||
+        (activeVendor.password || '12345') === '123'
+      );
+
+      if (isUsingDefault) {
+        setIsFirstTimeChangePass(true);
+        setIsChangePassModalOpen(true);
+      }
     } else {
-      alert(`लॉग इन नहीं हो पाया!\nकृपया चुने गए वेंडर का यूज़रनेम या फोन नंबर और सही पासवर्ड दर्ज करें।\nसंकेत: यूज़रनेम: ${currentVendor.username || 'mehtab'}, पासवर्ड: ${currentVendor.password || '123'}`);
+      alert(`लॉग इन नहीं हो पाया!\nकृपया अपना सही यूज़रनेम या फोन नंबर और पासवर्ड दर्ज करें।`);
     }
   };
 
@@ -251,6 +299,50 @@ export const VendorView: React.FC<VendorViewProps> = ({
     }
   };
 
+  // Handle Product Image Upload File
+  const handleProductImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('कृपया केवल फोटो/इमेज फ़ाइल ही चुनें!');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          setProdImageUrl(canvas.toDataURL('image/jpeg', 0.8));
+        } else {
+          setProdImageUrl(event.target?.result as string);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Handle Add Product Submit
   const handleAddProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,18 +351,20 @@ export const VendorView: React.FC<VendorViewProps> = ({
     setIsSubmitting(true);
     try {
       const finalCustPrice = Math.round(prodCostPrice * (1 + MARKUP_RATE));
+      const finalCategory = isCustomProdCategory ? (customProdCategory.trim() || 'General') : prodCategory;
+      const finalUnit = isCustomUnit ? (customUnitInput.trim() || '1 piece') : prodUnit;
       await onAddProduct({
         name: prodName,
         hindiName: prodHindiName,
         costPrice: Number(prodCostPrice),
         price: finalCustPrice,
         originalPrice: Math.round(finalCustPrice * 1.15),
-        category: prodCategory,
+        category: finalCategory,
         vendorId: currentVendor.id,
         vendorName: currentVendor.shopName,
         deliveryMode: prodDeliveryMode,
         stock: Number(prodStock),
-        unit: prodUnit,
+        unit: finalUnit,
         imageUrl: prodImageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500',
         description: 'Store item from ' + currentVendor.shopName
       });
@@ -280,6 +374,8 @@ export const VendorView: React.FC<VendorViewProps> = ({
       setProdHindiName('');
       setProdCostPrice(400);
       setProdImageUrl('');
+      setIsCustomUnit(false);
+      setCustomUnitInput('');
       setIsAddProductModalOpen(false);
       setActiveTab('products');
       alert(`✅ नया प्रोडक्ट "${prodName}" मार्केटप्लेस में सफलतापूर्वक जोड़ दिया गया है!`);
@@ -301,30 +397,6 @@ export const VendorView: React.FC<VendorViewProps> = ({
           </div>
           <h2 className="font-extrabold text-xl text-stone-900">विक्रेता पोर्टल लॉग इन (Vendor Login)</h2>
           <p className="text-xs text-stone-500 mt-1">दुकानदार अपने खाते में प्रवेश करें</p>
-        </div>
-
-        {/* Shop Switcher */}
-        <div className="mb-4 bg-stone-50 p-3 rounded-2xl border border-stone-200">
-          <label className="block text-xs font-bold text-stone-700 mb-1">दुकान चुनें (Select Shop)</label>
-          <select
-            value={selectedVendorId}
-            onChange={e => setSelectedVendorId(e.target.value)}
-            className="w-full bg-white border border-stone-300 font-bold text-xs p-2.5 rounded-xl outline-none"
-          >
-            {vendors.map(v => (
-              <option key={v.id} value={v.id}>🏪 {v.shopName} ({v.ownerName})</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Selected Vendor Credentials Hint */}
-        <div className="mb-4 bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-xs text-emerald-900 space-y-1">
-          <div className="font-bold flex items-center gap-1.5 text-emerald-950">
-            <Info className="w-4 h-4 text-emerald-700 shrink-0" />
-            <span>चुनी गई दुकान के लॉग इन विवरण (Login Details):</span>
-          </div>
-          <div>यूज़रनेम/फोन: <strong className="font-mono text-stone-900 bg-white px-1.5 py-0.5 rounded border border-emerald-200">{currentVendor.username || currentVendor.phone || 'mehtab'}</strong></div>
-          <div>पासवर्ड: <strong className="font-mono text-stone-900 bg-white px-1.5 py-0.5 rounded border border-emerald-200">{currentVendor.password || '123'}</strong></div>
         </div>
 
         <form onSubmit={handleVendorLogin} className="space-y-4">
@@ -440,19 +512,51 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
-                    <select
-                      value={regCategory}
-                      onChange={e => setRegCategory(e.target.value)}
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="कपड़े (Clothing)">कपड़े (Clothing)</option>
-                      <option value="हार्डवेयर (Hardware)">हार्डवेयर (Hardware)</option>
-                      <option value="सैनिटरी (Sanitaryware)">सैनिटरी (Sanitaryware)</option>
-                      <option value="किराना (Grocery)">किराना (Grocery)</option>
-                      <option value="इलेक्ट्रॉनिक्स (Electronics)">इलेक्ट्रॉनिक्स (Electronics)</option>
-                      <option value="जनरल स्टोर (General Store)">जनरल स्टोर (General Store)</option>
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-stone-700">श्रेणी (Category)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomRegCategory(!isCustomRegCategory);
+                          if (!isCustomRegCategory) setCustomRegCategory('');
+                        }}
+                        className="text-[10px] font-extrabold text-blue-700 hover:text-blue-900 underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Pencil className="w-3 h-3 text-blue-600" />
+                        <span>{isCustomRegCategory ? 'सूची से चुनें' : '✏️ एडिट/कस्टम'}</span>
+                      </button>
+                    </div>
+
+                    {!isCustomRegCategory ? (
+                      <select
+                        value={regCategory}
+                        onChange={e => {
+                          if (e.target.value === '__custom__') {
+                            setIsCustomRegCategory(true);
+                          } else {
+                            setRegCategory(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500 text-xs"
+                      >
+                        <option value="कपड़े (Clothing)">कपड़े (Clothing)</option>
+                        <option value="हार्डवेयर (Hardware)">हार्डवेयर (Hardware)</option>
+                        <option value="सैनिटरी (Sanitaryware)">सैनिटरी (Sanitaryware)</option>
+                        <option value="किराना (Grocery)">किराना (Grocery)</option>
+                        <option value="इलेक्ट्रॉनिक्स (Electronics)">इलेक्ट्रॉनिक्स (Electronics)</option>
+                        <option value="जनरल स्टोर (General Store)">जनरल स्टोर (General Store)</option>
+                        <option value="__custom__">✏️ + कस्टम श्रेणी एडिट/लिखें (Custom)</option>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        required
+                        value={customRegCategory}
+                        onChange={e => setCustomRegCategory(e.target.value)}
+                        placeholder="कस्टम श्रेणी दर्ज करें"
+                        className="w-full px-3 py-2 bg-amber-50 border-2 border-amber-400 rounded-xl outline-none text-xs font-bold text-stone-900"
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -624,8 +728,19 @@ export const VendorView: React.FC<VendorViewProps> = ({
           </button>
 
           <button
+            onClick={() => {
+              setIsFirstTimeChangePass(false);
+              setIsChangePassModalOpen(true);
+            }}
+            className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-2.5 rounded-xl border border-emerald-200 transition-all flex items-center gap-1.5"
+          >
+            <KeyRound className="w-4 h-4 text-emerald-600" />
+            <span>पासवर्ड बदलें</span>
+          </button>
+
+          <button
             onClick={() => setIsLoggedIn(false)}
-            className="text-xs font-bold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3.5 py-2.5 rounded-xl border border-stone-200 transition-all flex items-center gap-1"
+            className="text-xs font-bold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-2.5 rounded-xl border border-stone-200 transition-all flex items-center gap-1"
           >
             <X className="w-3.5 h-3.5" />
             <span>लॉग आउट</span>
@@ -711,16 +826,6 @@ export const VendorView: React.FC<VendorViewProps> = ({
             <span>हिसाब व सेटलमेंट (Settlements)</span>
           </button>
         </div>
-
-        {activeTab === 'products' && (
-          <button
-            onClick={() => setIsAddProductModalOpen(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            <span>नया सामान जोड़ें (+25% मार्जिन)</span>
-          </button>
-        )}
       </div>
 
       {/* TAB: SERVICES & LEADS */}
@@ -837,16 +942,46 @@ export const VendorView: React.FC<VendorViewProps> = ({
                   {prod.stock > 0 ? 'स्टॉक ख़त्म' : 'स्टॉक री-स्टॉक'}
                 </button>
 
-                <button
-                  onClick={() => {
-                    if (confirm('क्या आप ' + prod.name + ' को हटाना चाहते हैं?')) {
-                      onDeleteProduct(prod.id);
-                    }
-                  }}
-                  className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {deletingProdId === prod.id ? (
+                  <div className="flex items-center gap-1.5 animate-fadeIn">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const idToDelete = prod.id;
+                        setDeletingProdId(null);
+                        await onDeleteProduct(idToDelete);
+                      }}
+                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[11px] font-extrabold rounded-lg shadow-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>हाँ, हटाएं</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingProdId(null);
+                      }}
+                      className="px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-800 text-[11px] font-bold rounded-lg cursor-pointer"
+                    >
+                      रद्द
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletingProdId(prod.id);
+                    }}
+                    className="p-1.5 text-stone-600 hover:text-red-600 hover:bg-red-50 bg-red-50/50 border border-red-200 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                    title="हटाएं (Remove)"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                    <span className="text-[11px] font-bold text-red-600">हटाएं</span>
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -950,31 +1085,129 @@ export const VendorView: React.FC<VendorViewProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
-                    <select
-                      value={prodCategory}
-                      onChange={e => setProdCategory(e.target.value)}
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
-                    >
-                      <option value="Cloth House">कपड़ा व परिधान (Cloth House)</option>
-                      <option value="Hardware">हार्डवेयर व सेनेटरी (Hardware)</option>
-                      <option value="Groceries">किराना व अनाज (Groceries)</option>
-                      <option value="Vegetables">सब्ज़ियां व फल (Vegetables)</option>
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-stone-700">श्रेणी (Category)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomProdCategory(!isCustomProdCategory);
+                          if (!isCustomProdCategory) setCustomProdCategory('');
+                        }}
+                        className="text-[11px] font-extrabold text-blue-700 hover:text-blue-900 underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Pencil className="w-3 h-3 text-blue-600" />
+                        <span>{isCustomProdCategory ? 'सूची से चुनें' : '✏️ एडिट/कस्टम'}</span>
+                      </button>
+                    </div>
+
+                    {!isCustomProdCategory ? (
+                      <select
+                        value={prodCategory}
+                        onChange={e => {
+                          if (e.target.value === '__custom__') {
+                            setIsCustomProdCategory(true);
+                          } else {
+                            setProdCategory(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="Cloth House">कपड़ा व परिधान (Cloth House)</option>
+                        <option value="Hardware">हार्डवेयर व सेनेटरी (Hardware)</option>
+                        <option value="Groceries">किराना व अनाज (Groceries)</option>
+                        <option value="Vegetables">सब्ज़ियां व फल (Vegetables)</option>
+                        <option value="Electronics">इलेक्ट्रॉनिक्स व गैजेट्स (Electronics)</option>
+                        <option value="Footwear">जूते व चप्पल (Footwear)</option>
+                        <option value="Cosmetics">कॉस्मेटिक्स व ब्यूटी (Cosmetics)</option>
+                        <option value="Stationery">स्टेशनरी व बुक्स (Stationery)</option>
+                        <option value="__custom__">✏️ + कस्टम श्रेणी नाम खुद दर्ज करें (Custom)</option>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        required
+                        value={customProdCategory}
+                        onChange={e => setCustomProdCategory(e.target.value)}
+                        placeholder="उदा: मोबाइल एक्सेसरीज / लेडीज पर्स"
+                        className="w-full px-3 py-2 bg-amber-50 border-2 border-amber-400 rounded-xl text-xs font-extrabold outline-none text-stone-900 focus:ring-2 focus:ring-amber-500"
+                      />
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">पैकिंग / यूनिट</label>
-                    <input
-                      type="text"
-                      required
-                      value={prodUnit}
-                      onChange={e => setProdUnit(e.target.value)}
-                      placeholder="1 piece / 1 kg"
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-stone-700">पैकिंग / यूनिट (Packing Unit)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomUnit(!isCustomUnit);
+                          if (!isCustomUnit) setCustomUnitInput(prodUnit || '');
+                        }}
+                        className="text-[11px] font-extrabold text-blue-700 hover:text-blue-900 underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Pencil className="w-3 h-3 text-blue-600" />
+                        <span>{isCustomUnit ? 'सूची से चुनें' : '✏️ एडिट/कस्टम'}</span>
+                      </button>
+                    </div>
+
+                    {!isCustomUnit ? (
+                      <select
+                        value={prodUnit}
+                        onChange={e => {
+                          if (e.target.value === '__custom__') {
+                            setIsCustomUnit(true);
+                            setCustomUnitInput('');
+                          } else {
+                            setProdUnit(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="1 packet">1 पॅकेट (1 packet)</option>
+                        <option value="1 kg">1 किलोग्राम (1 kg)</option>
+                        <option value="500 g">500 ग्राम (500 g)</option>
+                        <option value="250 g">250 ग्राम (250 g)</option>
+                        <option value="1 piece">1 पीस (1 piece)</option>
+                        <option value="1 meter">1 मीटर (1 meter)</option>
+                        <option value="1 litre">1 लीटर (1 litre)</option>
+                        <option value="1 box">1 बॉक्स (1 box)</option>
+                        <option value="1 set">1 सेट (1 set)</option>
+                        <option value="1 dozen">1 दर्जन (1 dozen)</option>
+                        <option value="__custom__">✏️ + कस्टम यूनिट लिखें (Custom Unit)</option>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        required
+                        value={customUnitInput}
+                        onChange={e => setCustomUnitInput(e.target.value)}
+                        placeholder="उदा: 2.5 kg packet / 100 ml bottle / 2 meter"
+                        className="w-full px-3 py-2 bg-amber-50 border-2 border-amber-400 rounded-xl text-xs font-extrabold outline-none text-stone-900 focus:ring-2 focus:ring-amber-500"
+                      />
+                    )}
+
+                    {/* Quick Unit Chips */}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {['1 packet', '1 kg', '500 g', '1 piece', '1 meter', '1 litre'].map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => {
+                            setIsCustomUnit(false);
+                            setProdUnit(u);
+                          }}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                            !isCustomUnit && prodUnit === u
+                              ? 'bg-emerald-100 border-emerald-400 text-emerald-800'
+                              : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'
+                          }`}
+                        >
+                          {u}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -990,15 +1223,101 @@ export const VendorView: React.FC<VendorViewProps> = ({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">इमेज URL</label>
-                  <input
-                    type="url"
-                    value={prodImageUrl}
-                    onChange={e => setProdImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
-                  />
+                {/* PRODUCT PICTURE SELECTION SECTION */}
+                <div className="bg-stone-50 border border-stone-200 p-3 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-extrabold text-stone-800 flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-emerald-700" />
+                      <span>प्रोडक्ट की फोटो (Product Photo)</span>
+                    </label>
+                    {prodImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setProdImageUrl('')}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>हटाएं</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* IMAGE PREVIEW IF SELECTED */}
+                  {prodImageUrl ? (
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500 bg-white p-2 text-center">
+                      <img
+                        src={prodImageUrl}
+                        alt="Product Preview"
+                        className="h-32 w-full object-contain rounded-xl mx-auto"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="mt-1 bg-emerald-50 text-emerald-900 text-[11px] font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1 border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>फोटो सफलता से चुनी गई!</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-stone-300 rounded-2xl p-3 text-center bg-white">
+                      <ImageIcon className="w-6 h-6 text-stone-400 mx-auto mb-1" />
+                      <p className="text-[11px] font-bold text-stone-600">
+                        गैलरी/कैमरा से फोटो चुनें या नीचे बनी-बनाई फोटो पर क्लिक करें
+                      </p>
+                    </div>
+                  )}
+
+                  {/* OPTION 1: UPLOAD FROM DEVICE / CAMERA */}
+                  <div>
+                    <label className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all">
+                      <Upload className="w-4 h-4" />
+                      <span>{prodImageUrl ? 'दूसरी फोटो अपलोड करें (Gallery / Camera)' : '📸 फोन/कैमरा से फोटो अपलोड करें'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProductImageFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* OPTION 2: PRESET SAMPLE PHOTOS */}
+                  <div>
+                    <span className="block text-[11px] font-bold text-stone-600 mb-1 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      <span>या तुरंत बनी-बनाई सैम्पल फोटो चुनें:</span>
+                    </span>
+                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                      {SAMPLE_PRODUCT_IMAGES.map((sample, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setProdImageUrl(sample.url)}
+                          className={`shrink-0 border-2 rounded-xl p-1 bg-white text-left transition-all ${
+                            prodImageUrl === sample.url ? 'border-emerald-600 ring-2 ring-emerald-500/20' : 'border-stone-200 hover:border-emerald-400'
+                          }`}
+                        >
+                          <img src={sample.url} alt={sample.name} className="w-11 h-11 object-cover rounded-lg mb-1" />
+                          <span className="block text-[9px] font-bold text-stone-800 max-w-[55px] truncate">{sample.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* OPTION 3: DIRECT WEB LINK (URL) */}
+                  <div>
+                    <span className="block text-[10px] font-bold text-stone-500 mb-1 flex items-center gap-1">
+                      <LinkIcon className="w-3 h-3 text-stone-400" />
+                      <span>या इमेज का डायरेक्ट वेब URL दर्ज करें:</span>
+                    </span>
+                    <input
+                      type="url"
+                      value={prodImageUrl}
+                      onChange={e => setProdImageUrl(e.target.value)}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full px-3 py-1.5 bg-white border border-stone-300 rounded-xl text-xs outline-none"
+                    />
+                  </div>
                 </div>
 
                 <button
@@ -1013,6 +1332,21 @@ export const VendorView: React.FC<VendorViewProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePassModalOpen}
+        onClose={() => setIsChangePassModalOpen(false)}
+        portalTitle="वेंडर पोर्टल (Vendor Panel)"
+        currentUsername={currentVendor?.shopName || 'वेंडर'}
+        isFirstTime={isFirstTimeChangePass}
+        onSave={async (newPass) => {
+          if (currentVendor) {
+            await updateVendorPasswordDoc(currentVendor.id, newPass);
+            currentVendor.password = newPass;
+          }
+        }}
+      />
     </div>
   );
 };

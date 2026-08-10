@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider } from '../types';
+import { getServiceCategoryBadge } from './ServicesPanel';
 import { 
   ShieldAlert, 
   Store, 
@@ -18,9 +19,12 @@ import {
   User,
   Key,
   Lock,
-  Wrench
+  Wrench,
+  KeyRound,
+  Pencil
 } from 'lucide-react';
 import { firebaseConfigData } from '../firebase';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface AdminViewProps {
   products: Product[];
@@ -29,6 +33,7 @@ interface AdminViewProps {
   deliveryPartners: DeliveryPartner[];
   services?: ServiceProvider[];
   onUpdateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  onDeleteProduct?: (id: string) => Promise<void>;
   onAddVendor?: (vendor: Omit<Vendor, 'id'>) => Promise<string>;
   onDeleteVendor?: (vendorId: string) => Promise<void>;
   onAddDeliveryPartner?: (partner: Omit<DeliveryPartner, 'id'>) => Promise<string>;
@@ -45,6 +50,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   deliveryPartners = [],
   services = [],
   onUpdateOrderStatus,
+  onDeleteProduct,
   onAddVendor,
   onDeleteVendor,
   onAddDeliveryPartner,
@@ -53,26 +59,43 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onDeleteService,
   onSeedDefaults
 }) => {
-  const [activeTab, setActiveTab] = useState<'orders' | 'vendors' | 'delivery' | 'services' | 'database'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'vendors' | 'delivery' | 'services' | 'database'>('orders');
   const [orderSearch, setOrderSearch] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
+  const [deletingAdminProdId, setDeletingAdminProdId] = useState<string | null>(null);
 
   // Admin Auth State
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [adminUsername, setAdminUsername] = useState<string>('');
   const [adminPassword, setAdminPassword] = useState<string>('');
   const [adminAuthError, setAdminAuthError] = useState<string>('');
+  const [savedAdminPassword, setSavedAdminPassword] = useState<string>(() => {
+    return localStorage.getItem('smart_bazaar_admin_password') || '12345';
+  });
+
+  // Change Password Modal State
+  const [isChangePassModalOpen, setIsChangePassModalOpen] = useState<boolean>(false);
+  const [isFirstTimeChangePass, setIsFirstTimeChangePass] = useState<boolean>(false);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const u = adminUsername.trim().toLowerCase();
     const p = adminPassword.trim();
 
-    if ((u === 'admin' || u === '9457695918' || u === 'mehtab' || u === '') && (p === '1234' || p === '123' || p === 'admin')) {
+    const isUserValid = (u === 'admin' || u === 'user' || u === '9457695918' || u === 'mehtab' || u === '');
+    const isPassValid = (p === savedAdminPassword || p === '12345' || p === '1234' || p === '123' || p === 'admin');
+
+    if (isUserValid && isPassValid) {
       setIsAdminLoggedIn(true);
       setAdminAuthError('');
+
+      // If using default password 12345, 1234, 123 or admin, prompt for first-time change
+      if (p === '12345' || p === '1234' || p === '123' || p === 'admin' || savedAdminPassword === '12345') {
+        setIsFirstTimeChangePass(true);
+        setIsChangePassModalOpen(true);
+      }
     } else {
-      setAdminAuthError('गलत एडमिन यूज़रनेम या पासवर्ड! (Default: admin / 1234)');
+      setAdminAuthError('गलत एडमिन यूज़रनेम या पासवर्ड! (Default Password: 12345)');
     }
   };
 
@@ -82,10 +105,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [vOwnerName, setVOwnerName] = useState('');
   const [vPhone, setVPhone] = useState('');
   const [vCategory, setVCategory] = useState('कपड़े (Clothing)');
+  const [isCustomVCategory, setIsCustomVCategory] = useState(false);
+  const [customVCategoryInput, setCustomVCategoryInput] = useState('');
   const [vAddress, setVAddress] = useState('');
   const [vImageUrl, setVImageUrl] = useState('');
   const [vUsername, setVUsername] = useState('');
-  const [vPassword, setVPassword] = useState('123');
+  const [vPassword, setVPassword] = useState('12345');
   const [vSecAnswer, setVSecAnswer] = useState('express');
   const [isSubmittingVendor, setIsSubmittingVendor] = useState(false);
 
@@ -94,7 +119,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [pName, setPName] = useState('');
   const [pPhone, setPPhone] = useState('');
   const [pVehicle, setPVehicle] = useState('बाइक');
-  const [pPassword, setPPassword] = useState('123');
+  const [pPassword, setPPassword] = useState('12345');
   const [pSecAnswer, setPSecAnswer] = useState('express');
   const [isSubmittingPartner, setIsSubmittingPartner] = useState(false);
 
@@ -102,6 +127,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [sName, setSName] = useState('');
   const [sCategory, setSCategory] = useState<any>('प्लंबर (Plumber)');
+  const [isCustomSCategory, setIsCustomSCategory] = useState(false);
+  const [customSCategoryInput, setCustomSCategoryInput] = useState('');
   const [sPhone, setSPhone] = useState('');
   const [sExperienceYears, setSExperienceYears] = useState(3);
   const [sCharge, setSCharge] = useState(250);
@@ -118,11 +145,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     setIsSubmittingService(true);
     try {
+      const finalSCat = isCustomSCategory ? (customSCategoryInput.trim() || 'अन्य') : sCategory;
       await onAddService({
         providerName: sName.trim(),
-        serviceName: sCategory,
-        category: sCategory,
-        description: `${sCategory} सेवा एवं रिपेयरिंग कार्य`,
+        serviceName: finalSCat,
+        category: finalSCat,
+        description: `${finalSCat} सेवा एवं रिपेयरिंग कार्य`,
         primaryPhone: sPhone.trim(),
         whatsappPhone: sPhone.trim(),
         experienceYears: Number(sExperienceYears) || 3,
@@ -144,15 +172,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   const handleDeleteServiceClick = async (service: ServiceProvider) => {
-    if (confirm(`क्या आप वाकई सर्विस प्रोवाइडर "${service.providerName}" को हटाना चाहते हैं?`)) {
-      if (onDeleteService) {
-        try {
-          await onDeleteService(service.id);
-          alert(`सर्विस प्रोवाइडर "${service.providerName}" को हटा दिया गया है।`);
-        } catch (err) {
-          console.error('Error deleting service:', err);
-          alert('हटाने में समस्या आई।');
-        }
+    if (onDeleteService) {
+      try {
+        await onDeleteService(service.id);
+      } catch (err) {
+        console.error('Error deleting service:', err);
       }
     }
   };
@@ -194,11 +218,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     setIsSubmittingVendor(true);
     try {
+      const finalVCat = isCustomVCategory ? (customVCategoryInput.trim() || 'General Store') : vCategory;
       await onAddVendor({
         shopName: vShopName,
         ownerName: vOwnerName || vShopName,
         phone: vPhone,
-        category: vCategory,
+        category: finalVCat,
         address: vAddress || 'Main Market, Bijnor',
         status: 'active',
         rating: 4.8,
@@ -231,15 +256,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Delete Vendor
   const handleDeleteVendorClick = async (vendor: Vendor) => {
-    if (confirm(`क्या आप वाकई दुकान "${vendor.shopName}" को प्लेटफॉर्म से हटाना चाहते हैं?`)) {
-      if (onDeleteVendor) {
-        try {
-          await onDeleteVendor(vendor.id);
-          alert(`दुकान "${vendor.shopName}" को हटा दिया गया है।`);
-        } catch (err) {
-          console.error('Error deleting vendor:', err);
-          alert('हटाने में समस्या आई।');
-        }
+    if (onDeleteVendor) {
+      try {
+        await onDeleteVendor(vendor.id);
+      } catch (err) {
+        console.error('Error deleting vendor:', err);
       }
     }
   };
@@ -288,15 +309,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   // Delete Delivery Partner
   const handleDeletePartnerClick = async (partner: DeliveryPartner) => {
-    if (confirm(`क्या आप वाकई डिलीवरी राइडर "${partner.name}" को हटाना चाहते हैं?`)) {
-      if (onDeleteDeliveryPartner) {
-        try {
-          await onDeleteDeliveryPartner(partner.id);
-          alert(`राइडर "${partner.name}" को हटा दिया गया है।`);
-        } catch (err) {
-          console.error('Error deleting partner:', err);
-          alert('हटाने में समस्या आई।');
-        }
+    if (onDeleteDeliveryPartner) {
+      try {
+        await onDeleteDeliveryPartner(partner.id);
+      } catch (err) {
+        console.error('Error deleting partner:', err);
       }
     }
   };
@@ -313,15 +330,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <p className="text-xs text-stone-500 mt-1">सुरक्षित एडमिन क्रेडेंशियल दर्ज करके प्रवेश करें</p>
         </div>
 
-        <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl mb-4 text-xs text-amber-950 space-y-1">
-          <div className="font-bold flex items-center gap-1.5 text-stone-900">
-            <Key className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>डिफ़ॉल्ट एडमिन क्रेडेंशियल (Admin Login Details):</span>
-          </div>
-          <div>यूज़रनेम (Username): <strong className="font-mono text-stone-900 bg-white px-1.5 py-0.5 rounded border border-amber-200">admin</strong></div>
-          <div>पासवर्ड (Password): <strong className="font-mono text-stone-900 bg-white px-1.5 py-0.5 rounded border border-amber-200">1234</strong> (या 123)</div>
-        </div>
-
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">यूज़रनेम (Username)</label>
@@ -330,7 +338,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               required
               value={adminUsername}
               onChange={e => setAdminUsername(e.target.value)}
-              placeholder="admin"
+              placeholder="यूज़रनेम दर्ज करें"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-stone-900"
             />
           </div>
@@ -342,7 +350,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               required
               value={adminPassword}
               onChange={e => setAdminPassword(e.target.value)}
-              placeholder="1234"
+              placeholder="पासवर्ड दर्ज करें"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-stone-900"
             />
           </div>
@@ -392,6 +400,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <span>{isSeeding ? 'Seeding Database...' : 'Seed Catalog'}</span>
           </button>
           <button
+            onClick={() => {
+              setIsFirstTimeChangePass(false);
+              setIsChangePassModalOpen(true);
+            }}
+            className="bg-stone-800 hover:bg-stone-700 text-emerald-400 font-extrabold text-xs px-3.5 py-2.5 rounded-xl border border-stone-700 transition-all flex items-center gap-1.5"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+            <span>पासवर्ड बदलें</span>
+          </button>
+          <button
             onClick={() => setIsAdminLoggedIn(false)}
             className="bg-stone-800 hover:bg-stone-700 text-stone-200 font-extrabold text-xs px-3.5 py-2.5 rounded-xl border border-stone-700 transition-all flex items-center gap-1"
           >
@@ -439,6 +457,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
           }`}
         >
           All Orders ({orders.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === 'products'
+              ? 'bg-stone-900 text-white shadow-sm'
+              : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+          }`}
+        >
+          Products Catalog ({products.length})
         </button>
 
         <button
@@ -610,6 +639,91 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
+      {/* TAB: PRODUCTS */}
+      {activeTab === 'products' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between bg-stone-900 text-white p-4 rounded-2xl">
+            <div>
+              <h2 className="font-extrabold text-sm flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                <span>मार्केटप्लेस प्रोडक्ट कैटलॉग (Products Catalog - {products.length})</span>
+              </h2>
+              <p className="text-xs text-stone-300 mt-0.5">लाइव प्रोडक्ट्स की लिस्ट एवं डिलीट / रिमूव नियंत्रण</p>
+            </div>
+          </div>
+
+          {products.length === 0 ? (
+            <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center text-stone-500">
+              कोई भी प्रोडक्ट मौजूद नहीं है।
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {products.map(prod => (
+                <div key={prod.id} className="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-sm space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-100 mb-2">
+                      <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-cover" />
+                      <span className={`absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        prod.stock > 0 ? 'bg-emerald-700 text-white' : 'bg-red-600 text-white'
+                      }`}>
+                        {prod.stock > 0 ? `स्टॉक: ${prod.stock}` : 'आउट ऑफ स्टॉक'}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] font-bold text-emerald-700 uppercase">{prod.category} • {prod.unit}</div>
+                    <h3 className="font-extrabold text-stone-900 text-xs line-clamp-1">{prod.name}</h3>
+                    
+                    <div className="mt-1 text-xs text-stone-600 space-y-0.5">
+                      <div>विक्रेता रेट: <strong className="text-stone-900">₹{prod.costPrice || Math.round(prod.price / 1.25)}</strong></div>
+                      <div>ग्राहक मूल्य (+25%): <strong className="text-emerald-800">₹{prod.price}</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
+                    <span className="text-[10px] text-stone-400 font-mono">ID: {prod.id}</span>
+                    {onDeleteProduct && (
+                      deletingAdminProdId === prod.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const id = prod.id;
+                              setDeletingAdminProdId(null);
+                              await onDeleteProduct(id);
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-xl shadow-xs flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>हाँ, हटाएं</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingAdminProdId(null)}
+                            className="bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-[11px] px-2 py-1 rounded-xl cursor-pointer"
+                          >
+                            रद्द
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDeletingAdminProdId(prod.id)}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-red-200 transition-all flex items-center gap-1 cursor-pointer"
+                          title="हटाएं (Remove)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>हटाएं</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB: VENDORS */}
       {activeTab === 'vendors' && (
         <div className="space-y-4">
@@ -768,11 +882,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
               services.map(s => (
                 <div key={s.id} className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm space-y-3 relative hover:border-purple-300 transition-all">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={s.imageUrl || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80'}
-                      alt={s.providerName}
-                      className="w-12 h-12 rounded-xl object-cover border border-stone-100"
-                    />
+                    {(() => {
+                      const { icon: ServiceIcon, bg } = getServiceCategoryBadge(s.category);
+                      return (
+                        <div className={`w-12 h-12 rounded-xl ${bg} border flex items-center justify-center shrink-0`}>
+                          <ServiceIcon className="w-6 h-6" />
+                        </div>
+                      );
+                    })()}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-extrabold text-stone-900 text-sm truncate">{s.providerName}</h3>
                       <div className="text-xs text-purple-700 font-bold">{s.serviceName || s.category}</div>
@@ -881,21 +998,53 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
-                  <select
-                    value={vCategory}
-                    onChange={e => setVCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="कपड़े (Clothing)">कपड़े (Clothing)</option>
-                    <option value="हार्डवेयर (Hardware)">हार्डवेयर (Hardware)</option>
-                    <option value="सैनिटरी (Sanitaryware)">सैनिटरी (Sanitaryware)</option>
-                    <option value="किराना (Grocery)">किराना (Grocery)</option>
-                    <option value="इलेक्ट्रॉनिक्स (Electronics)">इलेक्ट्रॉनिक्स (Electronics)</option>
-                    <option value="जनरल स्टोर (General Store)">जनरल स्टोर (General Store)</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-stone-700">श्रेणी (Category)</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomVCategory(!isCustomVCategory);
+                        if (!isCustomVCategory) setCustomVCategoryInput('');
+                      }}
+                      className="text-[10px] font-extrabold text-blue-700 hover:text-blue-900 underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Pencil className="w-3 h-3 text-blue-600" />
+                      <span>{isCustomVCategory ? 'सूची से चुनें' : '✏️ एडिट/कस्टम'}</span>
+                    </button>
+                  </div>
+
+                  {!isCustomVCategory ? (
+                    <select
+                      value={vCategory}
+                      onChange={e => {
+                        if (e.target.value === '__custom__') {
+                          setIsCustomVCategory(true);
+                        } else {
+                          setVCategory(e.target.value);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500 text-xs"
+                    >
+                      <option value="कपड़े (Clothing)">कपड़े (Clothing)</option>
+                      <option value="हार्डवेयर (Hardware)">हार्डवेयर (Hardware)</option>
+                      <option value="सैनिटरी (Sanitaryware)">सैनिटरी (Sanitaryware)</option>
+                      <option value="किराना (Grocery)">किराना (Grocery)</option>
+                      <option value="इलेक्ट्रॉनिक्स (Electronics)">इलेक्ट्रॉनिक्स (Electronics)</option>
+                      <option value="जनरल स्टोर (General Store)">जनरल स्टोर (General Store)</option>
+                      <option value="__custom__">✏️ + कस्टम श्रेणी एडिट/लिखें (Custom)</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      value={customVCategoryInput}
+                      onChange={e => setCustomVCategoryInput(e.target.value)}
+                      placeholder="कस्टम दुकान श्रेणी नाम लिखें"
+                      className="w-full px-3 py-2 bg-amber-50 border-2 border-amber-400 rounded-xl outline-none text-xs font-bold text-stone-900"
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -1120,20 +1269,52 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold text-stone-700 mb-1">सर्विस श्रेणी (Category)</label>
-                <select
-                  value={sCategory}
-                  onChange={e => setSCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="प्लंबर (Plumber)">प्लंबर (Plumber)</option>
-                  <option value="इलेक्ट्रिशियन (Electrician)">इलेक्ट्रिशियन (Electrician)</option>
-                  <option value="ब्यूटीशियन / ब्यूटी पार्लर (Beautician)">ब्यूटीशियन / ब्यूटी पार्लर (Beautician)</option>
-                  <option value="डॉक्टर / क्लीनिक (Doctor)">डॉक्टर / क्लीनिक (Doctor)</option>
-                  <option value="एसी / टीवी तकनीशियन (AC/TV Repair)">एसी / टीवी तकनीशियन (AC/TV Repair)</option>
-                  <option value="बढ़ई / कारपेंटर (Carpenter)">बढ़ई / कारपेंटर (Carpenter)</option>
-                  <option value="कार / बाइक मैकेनिक (Mechanic)">कार / बाइक मैकेनिक (Mechanic)</option>
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-stone-700">सर्विस श्रेणी (Category)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomSCategory(!isCustomSCategory);
+                      if (!isCustomSCategory) setCustomSCategoryInput('');
+                    }}
+                    className="text-[10px] font-extrabold text-blue-700 hover:text-blue-900 underline flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <Pencil className="w-3 h-3 text-blue-600" />
+                    <span>{isCustomSCategory ? 'सूची से चुनें' : '✏️ एडिट/कस्टम'}</span>
+                  </button>
+                </div>
+
+                {!isCustomSCategory ? (
+                  <select
+                    value={sCategory}
+                    onChange={e => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomSCategory(true);
+                      } else {
+                        setSCategory(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="प्लंबर (Plumber)">प्लंबर (Plumber)</option>
+                    <option value="इलेक्ट्रिशियन (Electrician)">इलेक्ट्रिशियन (Electrician)</option>
+                    <option value="ब्यूटीशियन / ब्यूटी पार्लर (Beautician)">ब्यूटीशियन / ब्यूटी पार्लर (Beautician)</option>
+                    <option value="डॉक्टर / क्लीनिक (Doctor)">डॉक्टर / क्लीनिक (Doctor)</option>
+                    <option value="एसी / टीवी तकनीशियन (AC/TV Repair)">एसी / टीवी तकनीशियन (AC/TV Repair)</option>
+                    <option value="बढ़ई / कारपेंटर (Carpenter)">बढ़ई / कारपेंटर (Carpenter)</option>
+                    <option value="कार / बाइक मैकेनिक (Mechanic)">कार / बाइक मैकेनिक (Mechanic)</option>
+                    <option value="__custom__">✏️ + कस्टम सर्विस श्रेणी एडिट/दर्ज करें (Custom)</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={customSCategoryInput}
+                    onChange={e => setCustomSCategoryInput(e.target.value)}
+                    placeholder="कस्टम सर्विस श्रेणी नाम लिखें"
+                    className="w-full px-3 py-2 bg-amber-50 border-2 border-amber-400 rounded-xl outline-none text-xs font-bold text-stone-900"
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1204,6 +1385,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePassModalOpen}
+        onClose={() => setIsChangePassModalOpen(false)}
+        portalTitle="एडमिन पोर्टल (Admin Console)"
+        currentUsername={adminUsername || 'admin'}
+        isFirstTime={isFirstTimeChangePass}
+        onSave={(newPass) => {
+          localStorage.setItem('smart_bazaar_admin_password', newPass);
+          setSavedAdminPassword(newPass);
+        }}
+      />
     </div>
   );
 };

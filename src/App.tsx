@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, Product, CartItem, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking } from './types';
+import { UserRole, Product, CartItem, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser } from './types';
 import { 
   subscribeProducts, 
   subscribeOrders, 
@@ -30,7 +30,10 @@ import { CustomerView } from './components/CustomerView';
 import { VendorView } from './components/VendorView';
 import { DeliveryView } from './components/DeliveryView';
 import { AdminView } from './components/AdminView';
+import { ServicesPanel } from './components/ServicesPanel';
+import { CustomerAuthModal } from './components/CustomerAuthModal';
 import { MadeInIndiaFooter } from './components/MadeInIndiaFooter';
+import { AlertTriangle } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<UserRole>('customer');
@@ -40,6 +43,73 @@ export default function App() {
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
   const [services, setServices] = useState<ServiceProvider[]>([]);
   const [serviceBookings, setServiceBookings] = useState<ServiceBooking[]>([]);
+
+  // Customer authentication state
+  const [customerUser, setCustomerUser] = useState<CustomerUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('smart_bazaar_customer_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.name === 'string' && parsed.name.toLowerCase().includes('naushad')) {
+          localStorage.removeItem('smart_bazaar_customer_user');
+          return null;
+        }
+        return parsed;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (customerUser?.name?.toLowerCase().includes('naushad')) {
+      setCustomerUser(null);
+      try {
+        localStorage.removeItem('smart_bazaar_customer_user');
+      } catch (e) {
+        console.error('Error removing customer user:', e);
+      }
+    }
+  }, [customerUser]);
+
+  const [isCustomerAuthOpen, setIsCustomerAuthOpen] = useState<boolean>(false);
+  const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
+  const [pendingAuthPrompt, setPendingAuthPrompt] = useState<string>('');
+
+  const handleCustomerLoginSuccess = (user: CustomerUser) => {
+    setCustomerUser(user);
+    try {
+      localStorage.setItem('smart_bazaar_customer_user', JSON.stringify(user));
+    } catch (e) {
+      console.error('Error saving customer user:', e);
+    }
+    
+    if (pendingAuthAction) {
+      const action = pendingAuthAction;
+      setPendingAuthAction(null);
+      action();
+    }
+  };
+
+  const handleCustomerLogout = () => {
+    setCustomerUser(null);
+    try {
+      localStorage.removeItem('smart_bazaar_customer_user');
+    } catch (e) {
+      console.error('Error logging out customer:', e);
+    }
+  };
+
+  const triggerCustomerLogin = (actionCallback?: () => void, promptText?: string) => {
+    if (actionCallback) {
+      setPendingAuthAction(() => actionCallback);
+    } else {
+      setPendingAuthAction(null);
+    }
+    setPendingAuthPrompt(promptText || 'ऑर्डर करने या सर्विस बुक करने के लिए लॉगिन आवश्यक है।');
+    setIsCustomerAuthOpen(true);
+  };
   
   // Customer view state
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -171,10 +241,12 @@ export default function App() {
   };
 
   const handleUpdateProduct = async (id: string, updates: Partial<Product>) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
     await updateProductDoc(id, updates);
   };
 
   const handleDeleteProduct = async (id: string) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
     await deleteProductDoc(id);
   };
 
@@ -250,7 +322,11 @@ export default function App() {
         onOpenCart={() => {
           setCurrentRole('customer');
           setCustomerTab('shop');
-          setIsCartOpen(true);
+          if (!customerUser?.isLoggedIn) {
+            triggerCustomerLogin(() => setIsCartOpen(true), 'कार्ट देखने और ऑर्डर पूरा करने के लिए लॉगिन करें');
+          } else {
+            setIsCartOpen(true);
+          }
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -259,10 +335,26 @@ export default function App() {
           setCurrentRole('customer');
           setCustomerTab('orders');
         }}
+        customerUser={customerUser}
+        onOpenLoginModal={() => triggerCustomerLogin()}
+        onCustomerLogout={handleCustomerLogout}
       />
 
       {/* Role View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Top Warning Banner for all panels */}
+        <div className="mb-5 bg-gradient-to-r from-red-500 via-rose-600 to-red-600 text-white rounded-2xl p-3.5 sm:p-4 shadow-md flex items-center gap-3 relative overflow-hidden border border-red-400">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center shrink-0 shadow-inner">
+            <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm font-extrabold leading-relaxed tracking-wide">
+              <span className="text-amber-300 font-black text-sm sm:text-base mr-1">🚨 सावधान:</span>
+              किसी भी प्रकार की धोखाधड़ी पाए जाने पर अकाउंट तुरंत बंद किया जा सकता है तथा कानूनी कार्रवाई की जा सकती है।
+            </p>
+          </div>
+        </div>
+
         {currentRole === 'customer' && (
           <CustomerView
             products={products}
@@ -284,6 +376,8 @@ export default function App() {
             isCartOpen={isCartOpen}
             onCloseCart={() => setIsCartOpen(false)}
             onOpenCart={() => setIsCartOpen(true)}
+            customerUser={customerUser}
+            onRequireLogin={triggerCustomerLogin}
           />
         )}
 
@@ -314,6 +408,19 @@ export default function App() {
           />
         )}
 
+        {currentRole === 'service' && (
+          <ServicesPanel
+            services={services}
+            serviceBookings={serviceBookings}
+            onAddService={handleAddService}
+            onDeleteService={handleDeleteService}
+            onCreateBooking={handleCreateBooking}
+            isProviderView={true}
+            customerUser={customerUser}
+            onRequireLogin={triggerCustomerLogin}
+          />
+        )}
+
         {currentRole === 'admin' && (
           <AdminView
             products={products}
@@ -322,6 +429,7 @@ export default function App() {
             deliveryPartners={deliveryPartners}
             services={services}
             onUpdateOrderStatus={handleUpdateOrderStatus}
+            onDeleteProduct={handleDeleteProduct}
             onAddVendor={handleAddVendor}
             onDeleteVendor={handleDeleteVendor}
             onAddDeliveryPartner={handleAddDeliveryPartner}
@@ -334,6 +442,14 @@ export default function App() {
       </main>
 
       <MadeInIndiaFooter />
+
+      {/* Customer Login Modal */}
+      <CustomerAuthModal
+        isOpen={isCustomerAuthOpen}
+        onClose={() => setIsCustomerAuthOpen(false)}
+        onLoginSuccess={handleCustomerLoginSuccess}
+        pendingActionText={pendingAuthPrompt}
+      />
     </div>
   );
 }
