@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "products": {
+      "title": "Products",
+      "description": "Marketplace products catalog",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "hindiName": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "vendorName": { "type": "string" },
+        "stock": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "unit": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "price", "category", "vendorId"]
+    },
+    "orders": {
+      "title": "Orders",
+      "description": "Customer marketplace orders",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "otp": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "deliveryPartnerId": { "type": "string" },
+        "deliveryPartnerName": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["customerName", "deliveryAddress", "items", "totalAmount", "status"]
+    },
+    "vendors": {
+      "title": "Vendors",
+      "description": "Store vendors",
+      "type": "object",
+      "properties": {
+        "shopName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string" },
+        "address": { "type": "string" },
+        "rating": { "type": "number" }
+      },
+      "required": ["shopName", "phone"]
+    },
+    "deliveryPartners": {
+      "title": "Delivery Partners",
+      "description": "Delivery agents and status",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "vehicle": { "type": "string" },
+        "status": { "type": "string" },
+        "currentLocation": { "type": "string" },
+        "earnings": { "type": "number" }
+      },
+      "required": ["name", "phone"]
+    },
+    "serviceProviders": {
+      "title": "Service Providers",
+      "description": "Local technicians, plumbers, doctors, beauty parlors, electricians",
+      "type": "object",
+      "properties": {
+        "providerName": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "primaryPhone": { "type": "string" },
+        "whatsappPhone": { "type": "string" },
+        "address": { "type": "string" },
+        "rating": { "type": "number" },
+        "experienceYears": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["providerName", "serviceName", "category", "primaryPhone"]
+    },
+    "serviceBookings": {
+      "title": "Service Bookings",
+      "description": "Customer service booking requests and phone contacts",
+      "type": "object",
+      "properties": {
+        "serviceId": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "providerName": { "type": "string" },
+        "providerPhone": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerName": { "type": "string" },
+        "address": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["serviceId", "providerPhone", "customerPhone"]
+    }
+  }
+}

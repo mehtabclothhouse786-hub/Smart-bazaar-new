@@ -1,0 +1,6 @@
+{
+  "name": "Smart Bazaar",
+  "description": "Multi-role marketplace and delivery platform for customers, vendors, admins, and delivery partners with real-time sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
