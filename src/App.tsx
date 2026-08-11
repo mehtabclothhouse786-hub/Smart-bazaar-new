@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, Product, CartItem, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser } from './types';
 import { 
   subscribeProducts, 
@@ -26,6 +26,7 @@ import {
   seedServices,
   saveCustomerAccountDoc
 } from './services/db';
+import { playOrderSound, sendBrowserNotification, requestNotificationPermission } from './services/notification';
 import { Header } from './components/Header';
 import { CustomerView } from './components/CustomerView';
 import { VendorView } from './components/VendorView';
@@ -35,7 +36,7 @@ import { ServicesPanel } from './components/ServicesPanel';
 import { CustomerAuthModal } from './components/CustomerAuthModal';
 import { CustomerPanelModal } from './components/CustomerPanelModal';
 import { MadeInIndiaFooter } from './components/MadeInIndiaFooter';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Bell, Volume2, X } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState<UserRole>('customer');
@@ -145,10 +146,37 @@ export default function App() {
     }
   }, [cart]);
 
+  // Notification state
+  const [orderToast, setOrderToast] = useState<{ title: string; message: string; orderId?: string } | null>(null);
+  const isInitialOrdersLoad = useRef(true);
+  const knownOrdersRef = useRef<Set<string>>(new Set());
+
   // Subscribe to real-time Firestore collections
   useEffect(() => {
     const unsubProducts = subscribeProducts((data) => setProducts(data));
-    const unsubOrders = subscribeOrders((data) => setOrders(data));
+    const unsubOrders = subscribeOrders((data) => {
+      if (isInitialOrdersLoad.current) {
+        data.forEach(o => knownOrdersRef.current.add(o.id));
+        isInitialOrdersLoad.current = false;
+      } else {
+        // Find newly created orders
+        const newOrders = data.filter(o => !knownOrdersRef.current.has(o.id));
+        if (newOrders.length > 0) {
+          const latest = newOrders[0];
+          playOrderSound();
+          const title = `🛎️ नया ऑर्डर आया है! (ID: #${latest.id.slice(-5)})`;
+          const body = `₹${latest.totalAmount} • ग्राहक: ${latest.customerName} (${latest.customerPhone || ''})`;
+          sendBrowserNotification(title, body);
+          setOrderToast({
+            title,
+            message: body,
+            orderId: latest.id
+          });
+          newOrders.forEach(o => knownOrdersRef.current.add(o.id));
+        }
+      }
+      setOrders(data);
+    });
     const unsubVendors = subscribeVendors((data) => setVendors(data));
     const unsubPartners = subscribeDeliveryPartners((data) => setDeliveryPartners(data));
     const unsubServices = subscribeServices((data) => setServices(data));
@@ -239,7 +267,19 @@ export default function App() {
 
     // Optimistic local state update
     const createdOrder: Order = { ...newOrderData, id: orderId };
+    knownOrdersRef.current.add(orderId);
     setOrders(prev => [createdOrder, ...prev.filter(o => o.id !== orderId)]);
+
+    // Trigger ring sound alert & toast for placer
+    playOrderSound();
+    const title = `🎉 आपका ऑर्डर दर्ज हो गया है! (ID: #${orderId.slice(-5)})`;
+    const body = `₹${newOrderData.totalAmount} • स्टोर: ${newOrderData.vendorName || 'स्मार्ट बाजार'}`;
+    sendBrowserNotification(title, body);
+    setOrderToast({
+      title,
+      message: body,
+      orderId
+    });
 
     return orderId;
   };
@@ -324,8 +364,41 @@ export default function App() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-stone-100/70 text-stone-900 font-sans antialiased flex flex-col">
+    <div className="min-h-screen bg-stone-100/70 text-stone-900 font-sans antialiased flex flex-col relative">
       
+      {/* Real-time Order Notification Toast Popup */}
+      {orderToast && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md bg-stone-900 text-white rounded-2xl p-4 shadow-2xl border-2 border-amber-400 flex items-center gap-3.5 animate-bounce">
+          <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-400/40">
+            <Bell className="w-5 h-5 animate-pulse" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span>{orderToast.title}</span>
+            </h4>
+            <p className="text-xs font-bold text-stone-200 mt-0.5 truncate">{orderToast.message}</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                playOrderSound();
+                requestNotificationPermission();
+              }}
+              title="पुनः साउंड बजाएं / साउंड चालू करें"
+              className="p-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg transition-colors cursor-pointer"
+            >
+              <Volume2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setOrderToast(null)}
+              className="p-1.5 bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main App Navigation Header */}
       <Header
         currentRole={currentRole}

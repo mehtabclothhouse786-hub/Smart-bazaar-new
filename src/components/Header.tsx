@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserRole, CustomerUser } from '../types';
 import { MadeInIndiaLogo } from './MadeInIndiaLogo';
+import { playOrderSound, requestNotificationPermission } from '../services/notification';
 import { 
   Search,
   Sparkles,
@@ -9,7 +10,8 @@ import {
   UserCheck,
   LogIn,
   LogOut,
-  Pencil
+  Pencil,
+  Bell
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -155,6 +157,22 @@ export const Header: React.FC<HeaderProps> = ({
 
 
 
+              {/* Notification Sound / Ring Test Button */}
+              <button
+                onClick={async () => {
+                  playOrderSound();
+                  const granted = await requestNotificationPermission();
+                  if (granted) {
+                    alert('🔔 ऑडियो रिंग और सिस्टम नोटिफिकेशन एक्टिवेट कर दिए गए हैं!');
+                  }
+                }}
+                title="ऑर्डर रिंग साउंड टेस्ट करें व नोटिफिकेशन चालू करें"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-50 hover:bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-amber-700 hover:text-amber-900 transition-all active:scale-95 shadow-xs cursor-pointer relative"
+              >
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping" />
+              </button>
+
               {/* Three Dots Button ONLY to open Role Switcher */}
               <button
                 onClick={() => setIsRoleModalOpen(true)}
@@ -166,22 +184,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
           </div>
-
-          {/* Mobile Search Bar */}
-          {currentRole === 'customer' && (
-            <div className="lg:hidden mt-2 px-1">
-              <div className="relative w-full">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="उत्पाद खोजें (टमाटर, चावल, दूध, तेल)..."
-                  className="w-full pl-10 pr-4 py-2 bg-white text-xs font-medium border border-stone-200 rounded-full outline-none shadow-xs"
-                />
-              </div>
-            </div>
-          )}
         </div>
       </header>
 
