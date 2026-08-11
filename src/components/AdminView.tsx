@@ -323,9 +323,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         primaryPhone: editingService.primaryPhone,
         category: editingService.category,
         serviceName: editingService.serviceName,
-        location: editingService.location,
-        visitCharge: editingService.visitCharge,
-        password: editingService.password
+        address: editingService.address || editingService.location
       });
       alert(`✅ सर्विस प्रोवाइडर "${editingService.providerName}" की जानकारी अपडेट हो गई है!`);
       setEditingService(null);

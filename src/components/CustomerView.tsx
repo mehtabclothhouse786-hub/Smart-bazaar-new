@@ -22,7 +22,8 @@ import {
   ExternalLink,
   Wrench,
   LogIn,
-  Search
+  Search,
+  UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SMART_DELIVERY_UPI } from '../services/db';
@@ -92,6 +93,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   const [customerShopView, setCustomerShopView] = useState<'list' | 'catalog'>('list');
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [shopSearchQuery, setShopSearchQuery] = useState<string>('');
+  const [selectedShopCategory, setSelectedShopCategory] = useState<string>('सभी');
   
   // Checkout Modal state
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState<boolean>(false);
@@ -293,35 +295,88 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               </div>
 
               {/* Shop Search Bar */}
-              <div className="relative mb-5">
+              <div className="relative mb-3">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                 <input
                   type="text"
                   value={shopSearchQuery}
                   onChange={(e) => setShopSearchQuery(e.target.value)}
-                  placeholder="खोजें (दुकान का नाम, सामान, राशन, कपड़ा)..."
+                  placeholder="खोजें (दुकान का नाम, सामान, राशन, कपड़ा, हार्डवेयर)..."
                   className="w-full pl-10 pr-4 py-3 bg-white border border-stone-200 rounded-full text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none shadow-xs"
                 />
+              </div>
+
+              {/* Shop Category Chips */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">
+                {[
+                  { id: 'सभी', name: 'सभी दुकानें' },
+                  { id: 'Cloth House', name: 'कपड़ा व परिधान' },
+                  { id: 'Hardware', name: 'हार्डवेयर व सेनेटरी' },
+                  { id: 'Groceries', name: 'किराना व अनाज' },
+                  { id: 'Vegetables', name: 'सब्ज़ियां व फल' },
+                  { id: 'Electronics', name: 'इलेक्ट्रॉनिक्स' },
+                  { id: 'Footwear', name: 'जूते व चप्पल' },
+                  { id: 'Cosmetics', name: 'कॉस्मेटिक्स' },
+                  { id: 'Stationery', name: 'स्टेशनरी व बुक्स' }
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedShopCategory(cat.id)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
+                      selectedShopCategory === cat.id
+                        ? 'bg-emerald-800 text-white border-emerald-800 shadow-xs'
+                        : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-100'
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
               </div>
 
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
                   <span className="w-1.5 h-5 bg-emerald-600 rounded-full inline-block" />
                   <span>उपलब्ध दुकानें ({vendors.filter(v => {
-                    if (!shopSearchQuery.trim()) return true;
-                    const q = shopSearchQuery.toLowerCase();
                     const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
-                    return v.shopName.toLowerCase().includes(q) || v.address.toLowerCase().includes(q) || vProducts.some(p => p.name.toLowerCase().includes(q));
+                    
+                    // Category Chip Filter
+                    if (selectedShopCategory !== 'सभी') {
+                      const selCat = selectedShopCategory.toLowerCase();
+                      const vCat = (v.category || '').toLowerCase();
+                      const hasProdCat = vProducts.some(p => (p.category || '').toLowerCase().includes(selCat));
+                      if (!vCat.includes(selCat) && !hasProdCat) return false;
+                    }
+
+                    // Search Query Filter
+                    if (!shopSearchQuery.trim()) return true;
+                    const q = shopSearchQuery.toLowerCase().trim();
+                    return v.shopName.toLowerCase().includes(q) ||
+                           (v.address && v.address.toLowerCase().includes(q)) ||
+                           (v.category && v.category.toLowerCase().includes(q)) ||
+                           vProducts.some(p => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
                   }).length})</span>
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {vendors.filter(v => {
-                  if (!shopSearchQuery.trim()) return true;
-                  const q = shopSearchQuery.toLowerCase();
                   const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
-                  return v.shopName.toLowerCase().includes(q) || v.address.toLowerCase().includes(q) || vProducts.some(p => p.name.toLowerCase().includes(q));
+                  
+                  // Category Chip Filter
+                  if (selectedShopCategory !== 'सभी') {
+                    const selCat = selectedShopCategory.toLowerCase();
+                    const vCat = (v.category || '').toLowerCase();
+                    const hasProdCat = vProducts.some(p => (p.category || '').toLowerCase().includes(selCat));
+                    if (!vCat.includes(selCat) && !hasProdCat) return false;
+                  }
+
+                  // Search Query Filter
+                  if (!shopSearchQuery.trim()) return true;
+                  const q = shopSearchQuery.toLowerCase().trim();
+                  return v.shopName.toLowerCase().includes(q) ||
+                         (v.address && v.address.toLowerCase().includes(q)) ||
+                         (v.category && v.category.toLowerCase().includes(q)) ||
+                         vProducts.some(p => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
                 }).map(v => {
                   const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
                   const categories = Array.from(new Set(vProducts.map(p => p.category)));

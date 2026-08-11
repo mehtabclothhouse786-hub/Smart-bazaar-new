@@ -55,6 +55,7 @@ const CATEGORIES = [
   { name: 'ब्यूटी पार्लर', icon: Sparkles },
   { name: 'तकनीशियन', icon: Wrench },
   { name: 'कारपेंटर', icon: Building2 },
+  { name: 'पेंटर', icon: Sparkles },
   { name: 'अन्य', icon: UserCheck }
 ];
 
@@ -63,7 +64,7 @@ export const getServiceCategoryBadge = (category: string = '') => {
   if (cat.includes('इलेक्ट्रिशियन') || cat.includes('electrician') || cat.includes('बिजली') || cat.includes('ac')) {
     return { icon: Zap, bg: 'bg-amber-100 border-amber-300 text-amber-800' };
   }
-  if (cat.includes('डॉक्टर') || cat.includes('doctor') || cat.includes('क्लीनिक')) {
+  if (cat.includes('डॉक्टर') || cat.includes('doctor') || cat.includes('क्लीनिक') || cat.includes('चिकित्सा')) {
     return { icon: Stethoscope, bg: 'bg-rose-100 border-rose-300 text-rose-800' };
   }
   if (cat.includes('ब्यूटी') || cat.includes('beauty') || cat.includes('पार्लर') || cat.includes('ब्यूटीशियन')) {
@@ -74,6 +75,12 @@ export const getServiceCategoryBadge = (category: string = '') => {
   }
   if (cat.includes('प्लंबर') || cat.includes('plumber') || cat.includes('नल')) {
     return { icon: Wrench, bg: 'bg-blue-100 border-blue-300 text-blue-800' };
+  }
+  if (cat.includes('पेंटर') || cat.includes('painter') || cat.includes('पेंटिंग') || cat.includes('रंग')) {
+    return { icon: Sparkles, bg: 'bg-purple-100 border-purple-300 text-purple-800' };
+  }
+  if (cat.includes('तकनीशियन') || cat.includes('technician') || cat.includes('रिपेयर')) {
+    return { icon: Wrench, bg: 'bg-indigo-100 border-indigo-300 text-indigo-800' };
   }
   return { icon: Wrench, bg: 'bg-teal-100 border-teal-300 text-teal-800' };
 };
@@ -189,13 +196,34 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
 
   // Filter Services
   const filteredServices = services.filter(s => {
+    const query = searchQuery.toLowerCase().trim();
     const matchesCategory = selectedCategory === 'सभी' || s.category === selectedCategory;
-    const query = searchQuery.toLowerCase();
+
+    if (!query) return matchesCategory;
+
+    const catLower = (s.category || '').toLowerCase();
+    const nameLower = (s.serviceName || '').toLowerCase();
+    const provLower = (s.providerName || '').toLowerCase();
+    const addrLower = (s.address || '').toLowerCase();
+    const descLower = (s.description || '').toLowerCase();
+
     const matchesSearch = 
-      s.providerName.toLowerCase().includes(query) ||
-      s.serviceName.toLowerCase().includes(query) ||
-      s.category.toLowerCase().includes(query) ||
-      (s.address && s.address.toLowerCase().includes(query));
+      provLower.includes(query) ||
+      nameLower.includes(query) ||
+      catLower.includes(query) ||
+      addrLower.includes(query) ||
+      descLower.includes(query) ||
+      ((query.includes('plumber') || query.includes('नल') || query.includes('पाइप')) && catLower.includes('प्लंबर')) ||
+      ((query.includes('electric') || query.includes('बिजली') || query.includes('लाइट')) && catLower.includes('इलेक्ट्रिशियन')) ||
+      ((query.includes('doctor') || query.includes('डॉक्टर') || query.includes('चिकित्सा')) && catLower.includes('डॉक्टर')) ||
+      ((query.includes('beauty') || query.includes('पार्लर') || query.includes('मेकअप')) && catLower.includes('ब्यूटी')) ||
+      ((query.includes('tech') || query.includes('तकनीशियन') || query.includes('मोबाइल')) && catLower.includes('तकनीशियन')) ||
+      ((query.includes('carpenter') || query.includes('कारपेंटर') || query.includes('बढ़ई')) && catLower.includes('कारपेंटर')) ||
+      ((query.includes('paint') || query.includes('पेंटर') || query.includes('रंग')) && catLower.includes('पेंटर'));
+
+    if (selectedCategory === 'सभी') {
+      return matchesSearch;
+    }
     return matchesCategory && matchesSearch;
   });
 

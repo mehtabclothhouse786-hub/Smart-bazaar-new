@@ -3,95 +3,96 @@ import React from 'react';
 export const MadeInIndiaLogo: React.FC<{ className?: string }> = ({ className = "w-11 h-11" }) => {
   return (
     <div className={`relative rounded-full shrink-0 flex items-center justify-center ${className}`}>
-      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+      <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-md select-none">
         <defs>
-          {/* Metallic Silver Rim Gradient */}
+          {/* Outer Metallic Silver Bezel */}
           <linearGradient id="silverBezel" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="20%" stopColor="#cbd5e1" />
-            <stop offset="50%" stopColor="#64748b" />
-            <stop offset="80%" stopColor="#94a3b8" />
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="25%" stopColor="#CBD5E1" />
+            <stop offset="50%" stopColor="#64748B" />
+            <stop offset="75%" stopColor="#94A3B8" />
             <stop offset="100%" stopColor="#334155" />
           </linearGradient>
 
+          {/* Inner Silver Ring */}
           <radialGradient id="silverInner" cx="35%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="50%" stopColor="#e2e8f0" />
-            <stop offset="100%" stopColor="#64748b" />
+            <stop offset="0%" stopColor="#F8FAFC" />
+            <stop offset="50%" stopColor="#E2E8F0" />
+            <stop offset="100%" stopColor="#94A3B8" />
           </radialGradient>
 
-          {/* Arc Paths for Text */}
-          <path id="arcTopText" d="M 19 50 A 31 31 0 0 1 81 50" />
-          <path id="arcBottomText" d="M 81 50 A 31 31 0 0 1 19 50" />
+          {/* Text Arcs */}
+          <path id="topTextArc" d="M 30 100 A 70 70 0 0 1 170 100" />
+          <path id="bottomTextArc" d="M 170 100 A 70 70 0 0 1 30 100" />
 
-          {/* Clip path for Flag */}
-          <clipPath id="flagInnerCircle">
-            <circle cx="50" cy="50" r="29" />
+          {/* Clip Path for Central Tricolor Flag */}
+          <clipPath id="flagCircleClip">
+            <circle cx="100" cy="100" r="54" />
           </clipPath>
         </defs>
 
-        {/* Outer Metallic Bezel */}
-        <circle cx="50" cy="50" r="49" fill="url(#silverBezel)" stroke="#334155" strokeWidth="0.8" />
-        <circle cx="50" cy="50" r="42" fill="url(#silverInner)" />
-        <circle cx="50" cy="50" r="31" fill="#1e293b" />
+        {/* Outer Silver Bezel */}
+        <circle cx="100" cy="100" r="98" fill="url(#silverBezel)" stroke="#334155" strokeWidth="1.5" />
+        <circle cx="100" cy="100" r="93" fill="url(#silverInner)" />
+        <circle cx="100" cy="100" r="91" fill="none" stroke="#FFFFFF" strokeWidth="1" strokeOpacity="0.8" />
+        <circle cx="100" cy="100" r="89" fill="url(#silverBezel)" />
+        <circle cx="100" cy="100" r="68" fill="url(#silverInner)" stroke="#475569" strokeWidth="2" />
 
-        {/* Curved MADE IN INDIA Text */}
-        <text className="fill-slate-900 font-black text-[7.2px] tracking-widest uppercase">
-          <textPath href="#arcTopText" startOffset="50%" textAnchor="middle">
+        {/* MADE IN INDIA Text on Top Arc */}
+        <text className="font-black tracking-widest uppercase" fill="#0F172A" fontSize="18" fontWeight="900">
+          <textPath href="#topTextArc" startOffset="50%" textAnchor="middle">
             MADE IN INDIA
           </textPath>
         </text>
-        <text className="fill-slate-900 font-black text-[7.2px] tracking-widest uppercase">
-          <textPath href="#arcBottomText" startOffset="50%" textAnchor="middle">
+
+        {/* MADE IN INDIA Text on Bottom Arc */}
+        <text className="font-black tracking-widest uppercase" fill="#0F172A" fontSize="18" fontWeight="900">
+          <textPath href="#bottomTextArc" startOffset="50%" textAnchor="middle">
             MADE IN INDIA
           </textPath>
         </text>
 
-        {/* Left Side Stars */}
-        <g fill="#1e293b">
-          <polygon points="12,41 13.2,43.5 16,43.9 14,45.8 14.5,48.5 12,47.2 9.5,48.5 10,45.8 8,43.9 10.8,43.5" transform="scale(0.7) translate(5, 10)" />
-          <polygon points="12,50 13.2,52.5 16,52.9 14,54.8 14.5,57.5 12,56.2 9.5,57.5 10,54.8 8,52.9 10.8,52.5" transform="scale(0.7) translate(5, 12)" />
-          <polygon points="12,59 13.2,61.5 16,61.9 14,63.8 14.5,66.5 12,65.2 9.5,66.5 10,63.8 8,61.9 10.8,61.5" transform="scale(0.7) translate(5, 14)" />
+        {/* 3 Stars Left */}
+        <g fill="#0F172A">
+          <polygon points="100,100 102.5,107.5 110,107.5 104,112 106,119 100,114.5 94,119 96,112 90,107.5 97.5,107.5" transform="translate(-74, -40) scale(0.68)" />
+          <polygon points="100,100 102.5,107.5 110,107.5 104,112 106,119 100,114.5 94,119 96,112 90,107.5 97.5,107.5" transform="translate(-79, -10) scale(0.68)" />
+          <polygon points="100,100 102.5,107.5 110,107.5 104,112 106,119 100,114.5 94,119 96,112 90,107.5 97.5,107.5" transform="translate(-74, 20) scale(0.68)" />
         </g>
 
-        {/* Right Side Stars */}
-        <g fill="#1e293b">
-          <polygon points="12,41 13.2,43.5 16,43.9 14,45.8 14.5,48.5 12,47.2 9.5,48.5 10,45.8 8,43.9 10.8,43.5" transform="scale(0.7) translate(118, 10)" />
-          <polygon points="12,50 13.2,52.5 16,52.9 14,54.8 14.5,57.5 12,56.2 9.5,57.5 10,54.8 8,52.9 10.8,52.5" transform="scale(0.7) translate(118, 12)" />
-          <polygon points="12,59 13.2,61.5 16,61.9 14,63.8 14.5,66.5 12,65.2 9.5,66.5 10,63.8 8,61.9 10.8,61.5" transform="scale(0.7) translate(118, 14)" />
+        {/* 3 Stars Right */}
+        <g fill="#0F172A">
+          <polygon points="100,100 102.5,107.5 110,107.5 104,112 106,119 100,114.5 94,119 96,112 90,107.5 97.5,107.5" transform="translate(32, -40) scale(0.68)" />
+          <polygon points="100,100 102.5,107.5 110,107.5 104,112 106,119 100,114.5 94,119 96,112 90,107.5 97.5,107.5" transform="translate(37, -10) scale(0.68)" />
+          <polygon points="100,100 102.5,107.5 110,107.5 104,112 106,119 100,114.5 94,119 96,112 90,107.5 97.5,107.5" transform="translate(32, 20) scale(0.68)" />
         </g>
 
-        {/* Inner Tricolor Flag Circle */}
-        <g clipPath="url(#flagInnerCircle)">
-          {/* Saffron */}
-          <rect x="20" y="20" width="60" height="20" fill="#FF9933" />
-          {/* White */}
-          <rect x="20" y="40" width="60" height="20" fill="#FFFFFF" />
-          {/* Green */}
-          <rect x="20" y="60" width="60" height="20" fill="#138808" />
+        {/* Central Tricolor Flag Circle */}
+        <g clipPath="url(#flagCircleClip)">
+          {/* Saffron Top Band */}
+          <rect x="40" y="40" width="120" height="38" fill="#FF9933" />
+          {/* White Middle Band */}
+          <rect x="40" y="78" width="120" height="44" fill="#FFFFFF" />
+          {/* Green Bottom Band */}
+          <rect x="40" y="122" width="120" height="38" fill="#138808" />
 
-          {/* Ashoka Chakra */}
-          <circle cx="50" cy="50" r="8" fill="none" stroke="#000080" strokeWidth="0.9" />
-          <circle cx="50" cy="50" r="1.2" fill="#000080" />
-          {/* 24 spokes */}
-          {Array.from({ length: 24 }).map((_, i) => {
-            const angle = (i * 15 * Math.PI) / 180;
-            return (
+          {/* Ashoka Chakra (24 Spokes Wheel) */}
+          <g stroke="#000080" strokeWidth="1.2" fill="none">
+            <circle cx="100" cy="100" r="16" strokeWidth="1.8" />
+            <circle cx="100" cy="100" r="2.5" fill="#000080" />
+            {Array.from({ length: 24 }).map((_, i) => (
               <line
                 key={i}
-                x1="50"
-                y1="50"
-                x2={50 + 8 * Math.cos(angle)}
-                y2={50 + 8 * Math.sin(angle)}
-                stroke="#000080"
-                strokeWidth="0.5"
+                x1="100"
+                y1="100"
+                x2={100 + 16 * Math.cos((i * 15 * Math.PI) / 180)}
+                y2={100 + 16 * Math.sin((i * 15 * Math.PI) / 180)}
               />
-            );
-          })}
+            ))}
+          </g>
         </g>
 
-        {/* Inner Bezel Ring Frame */}
-        <circle cx="50" cy="50" r="29" fill="none" stroke="#475569" strokeWidth="1.2" />
+        {/* Dark Navy Ring around Tricolor Flag */}
+        <circle cx="100" cy="100" r="54" fill="none" stroke="#0F172A" strokeWidth="3" />
       </svg>
     </div>
   );
