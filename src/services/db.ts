@@ -74,7 +74,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'p1',
     name: 'कॉटन कुर्ता (पुरुष)',
-    hindiName: 'कॉटन कुर्ता (पुरुष)',
+    shortDescription: '100% शुद्ध कॉटन, आरामदायक फिटिंग',
     costPrice: 399,
     price: 499, // 399 * 1.25 = ~499
     originalPrice: 699,
@@ -91,7 +91,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'p2',
     name: 'महिला साड़ी - सिल्क',
-    hindiName: 'महिला साड़ी - सिल्क',
+    shortDescription: 'बनारसी आर्ट सिल्क साड़ी, हैवी पल्लू वर्क',
     costPrice: 1039,
     price: 1299, // 1039 * 1.25 = ~1299
     originalPrice: 1799,

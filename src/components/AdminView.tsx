@@ -740,6 +740,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                     <div className="text-[11px] font-bold text-emerald-700 uppercase">{prod.category} • {prod.unit}</div>
                     <h3 className="font-extrabold text-stone-900 text-xs line-clamp-1">{prod.name}</h3>
+                    {(prod.shortDescription || prod.description) && (
+                      <p className="text-[10px] text-stone-600 font-medium line-clamp-1 mt-0.5 bg-stone-50 px-1.5 py-0.5 rounded border border-stone-200">
+                        {prod.shortDescription || prod.description}
+                      </p>
+                    )}
                     
                     <div className="mt-1 text-xs text-stone-600 space-y-0.5">
                       <div>विक्रेता रेट: <strong className="text-stone-900">₹{prod.costPrice || Math.round(prod.price / 1.25)}</strong></div>

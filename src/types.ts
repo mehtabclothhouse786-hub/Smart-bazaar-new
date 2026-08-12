@@ -13,7 +13,7 @@ export interface CustomerUser {
 export interface Product {
   id: string;
   name: string;
-  hindiName?: string;
+  shortDescription?: string;
   costPrice?: number; // Vendor Rate
   price: number; // Customer Price (+25% markup)
   originalPrice?: number; // MRP

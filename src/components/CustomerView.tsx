@@ -479,6 +479,11 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                             <h3 className="font-extrabold text-stone-900 text-sm leading-snug line-clamp-1">
                               {product.name}
                             </h3>
+                            {(product.shortDescription || product.description) && (
+                              <p className="text-[11px] text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold inline-block mt-0.5 line-clamp-1 border border-emerald-100">
+                                {product.shortDescription || product.description}
+                              </p>
+                            )}
                             <p className="text-xs text-stone-500 line-clamp-1 font-medium mt-0.5">
                               विक्रेता: {product.vendorName}
                             </p>

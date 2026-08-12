@@ -183,7 +183,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
   // New product form state with Rate & Markup model
   const [prodName, setProdName] = useState('');
-  const [prodHindiName, setProdHindiName] = useState('');
+  const [prodShortDesc, setProdShortDesc] = useState('');
   const [prodCostPrice, setProdCostPrice] = useState<number>(400); // Vendor Rate
   const [prodCategory, setProdCategory] = useState('Groceries');
   const [isCustomProdCategory, setIsCustomProdCategory] = useState(false);
@@ -389,7 +389,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
       const finalUnit = isCustomUnit ? (customUnitInput.trim() || '1 piece') : prodUnit;
       await onAddProduct({
         name: prodName,
-        hindiName: prodHindiName,
+        shortDescription: prodShortDesc.trim() || undefined,
         costPrice: Number(prodCostPrice),
         price: finalCustPrice,
         originalPrice: Math.round(finalCustPrice * 1.15),
@@ -400,12 +400,12 @@ export const VendorView: React.FC<VendorViewProps> = ({
         stock: Number(prodStock),
         unit: finalUnit,
         imageUrl: prodImageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500',
-        description: 'Store item from ' + currentVendor.shopName
+        description: prodShortDesc.trim() || ('Store item from ' + currentVendor.shopName)
       });
 
       // Reset form
       setProdName('');
-      setProdHindiName('');
+      setProdShortDesc('');
       setProdCostPrice(400);
       setProdImageUrl('');
       setIsCustomUnit(false);
@@ -969,6 +969,11 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
                 <div className="text-[11px] font-bold text-emerald-700 uppercase">{prod.category} • {prod.unit}</div>
                 <h3 className="font-extrabold text-stone-900 text-xs line-clamp-1">{prod.name}</h3>
+                {(prod.shortDescription || prod.description) && (
+                  <p className="text-[10px] text-stone-600 font-medium line-clamp-1 mt-0.5 bg-stone-50 px-1.5 py-0.5 rounded border border-stone-200">
+                    {prod.shortDescription || prod.description}
+                  </p>
+                )}
                 
                 <div className="mt-2 text-xs text-stone-600 space-y-0.5">
                   <div>विक्रेता रेट (Cost): <strong className="text-stone-900">₹{prod.costPrice || Math.round(prod.price / 1.25)}</strong></div>
@@ -1077,25 +1082,25 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
               <form onSubmit={handleAddProductSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">सामान का नाम (English Name)</label>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">सामान का नाम (Product Name)</label>
                   <input
                     type="text"
                     required
                     value={prodName}
                     onChange={e => setProdName(e.target.value)}
-                    placeholder="उदा. Cotton Saree / Premium Rice"
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
+                    placeholder="उदा. कॉटन साड़ी / Cotton Saree / Premium Rice"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">हिंदी नाम (ऑप्शनल)</label>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">संक्षिप्त विवरण / मुख्य विशेषताएं (Short Description)</label>
                   <input
                     type="text"
-                    value={prodHindiName}
-                    onChange={e => setProdHindiName(e.target.value)}
-                    placeholder="उदा. सूती साड़ी"
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
+                    value={prodShortDesc}
+                    onChange={e => setProdShortDesc(e.target.value)}
+                    placeholder="उदा. 100% शुद्ध सूती कपड़ा, आरामदायक व हल्का"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
