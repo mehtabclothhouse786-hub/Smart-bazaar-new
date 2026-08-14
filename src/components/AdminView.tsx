@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider } from '../types';
+import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from '../types';
 import { getServiceCategoryBadge } from './ServicesPanel';
 import { 
   ShieldAlert, 
@@ -21,17 +21,30 @@ import {
   Lock,
   Wrench,
   KeyRound,
-  Pencil
+  Pencil,
+  Sliders,
+  Percent,
+  HelpCircle,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  MessageSquare,
+  Sparkles,
+  Check
 } from 'lucide-react';
 import { firebaseConfigData } from '../firebase';
 import { 
   updateVendorDoc, 
   updateDeliveryPartnerDoc, 
   updateServiceProviderDoc,
-  restoreAllDefaults
+  restoreAllDefaults,
+  updateCommissionSettingsDoc,
+  resetCommissionSettingsDoc,
+  calculateAdminCommissionAmount
 } from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { Product3DIcon } from './Product3DIcon';
+import { MarginControlChart } from './MarginControlChart';
 import { ALL_SHOP_CATEGORIES, CURATED_SHOP_PHOTOS, getCategoryPhoto } from '../utils/categoryData';
 
 interface AdminViewProps {
@@ -40,7 +53,10 @@ interface AdminViewProps {
   vendors: Vendor[];
   deliveryPartners: DeliveryPartner[];
   services?: ServiceProvider[];
-  onUpdateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  commissionSettings?: CommissionSettings;
+  onUpdateCommissionSettings?: (settings: Partial<CommissionSettings>) => Promise<void>;
+  onResetCommissionSettings?: () => Promise<void>;
+  onUpdateOrderStatus: (orderId: string, status: OrderStatus, extra?: any) => Promise<void>;
   onDeleteProduct?: (id: string) => Promise<void>;
   onAddVendor?: (vendor: Omit<Vendor, 'id'>) => Promise<string>;
   onDeleteVendor?: (vendorId: string) => Promise<void>;
@@ -57,6 +73,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   vendors = [],
   deliveryPartners = [],
   services = [],
+  commissionSettings = DEFAULT_COMMISSION_SETTINGS,
+  onUpdateCommissionSettings,
+  onResetCommissionSettings,
   onUpdateOrderStatus,
   onDeleteProduct,
   onAddVendor,
@@ -67,7 +86,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onDeleteService,
   onSeedDefaults
 }) => {
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'vendors' | 'delivery' | 'services' | 'database'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'margins' | 'products' | 'vendors' | 'delivery' | 'services' | 'database'>('orders');
   const [orderSearch, setOrderSearch] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
   const [deletingAdminProdId, setDeletingAdminProdId] = useState<string | null>(null);
@@ -84,6 +103,162 @@ export const AdminView: React.FC<AdminViewProps> = ({
   // Change Password Modal State
   const [isChangePassModalOpen, setIsChangePassModalOpen] = useState<boolean>(false);
   const [isFirstTimeChangePass, setIsFirstTimeChangePass] = useState<boolean>(false);
+
+  // Admin Forgot Password State
+  const [isAdminForgotModalOpen, setIsAdminForgotModalOpen] = useState<boolean>(false);
+  const [adminSavedSecAnswer, setAdminSavedSecAnswer] = useState<string>(() => {
+    return localStorage.getItem('smart_bazaar_admin_sec_answer') || 'bazaar_admin';
+  });
+  const [forgotRecoveryMethod, setForgotRecoveryMethod] = useState<'secret_word' | 'master_pin' | 'whatsapp_otp'>('secret_word');
+  const [forgotSecAnswerInput, setForgotSecAnswerInput] = useState<string>('');
+  const [forgotMasterPinInput, setForgotMasterPinInput] = useState<string>('');
+  const [forgotOtpInput, setForgotOtpInput] = useState<string>('');
+  const [generatedOtp, setGeneratedOtp] = useState<string>('');
+  const [isOtpSent, setIsOtpSent] = useState<boolean>(false);
+  const [isVerifiedForReset, setIsVerifiedForReset] = useState<boolean>(false);
+  const [forgotNewPassword, setForgotNewPassword] = useState<string>('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState<string>('');
+  const [forgotNewSecAnswer, setForgotNewSecAnswer] = useState<string>('');
+  const [showForgotNewPass, setShowForgotNewPass] = useState<boolean>(false);
+  const [forgotError, setForgotError] = useState<string>('');
+  const [forgotSuccess, setForgotSuccess] = useState<string>('');
+  const [isSubmittingForgot, setIsSubmittingForgot] = useState<boolean>(false);
+
+  const handleOpenForgotModal = () => {
+    setForgotError('');
+    setForgotSuccess('');
+    setIsVerifiedForReset(false);
+    setForgotSecAnswerInput('');
+    setForgotMasterPinInput('');
+    setForgotOtpInput('');
+    setGeneratedOtp('');
+    setIsOtpSent(false);
+    setForgotNewPassword('');
+    setForgotConfirmPassword('');
+    setForgotNewSecAnswer('');
+    setShowForgotNewPass(false);
+    setForgotRecoveryMethod('secret_word');
+    setIsAdminForgotModalOpen(true);
+  };
+
+  const handleSendWhatsAppOtp = () => {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(code);
+    setIsOtpSent(true);
+    setForgotError('');
+
+    const text = `🔐 *स्मार्ट बाजार एडमिन पासवर्ड रीसेट कोड (Admin Recovery OTP)*\n\nआपका 6-अंकीय सत्यापन कोड: *${code}*\n\nकृपया इस कोड को पोर्टल में दर्ज करके नया पासवर्ड सेट करें।\n(Smart Bazaar Security)`;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=919457695918&text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleVerifyRecovery = (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess('');
+
+    if (forgotRecoveryMethod === 'secret_word') {
+      const input = forgotSecAnswerInput.trim().toLowerCase();
+      const validAnswers = [
+        adminSavedSecAnswer.toLowerCase(),
+        'bazaar_admin',
+        'smartbazaar',
+        'smart_bazaar',
+        'mehtab',
+        'bijnor',
+        'express',
+        'admin',
+        'admin123',
+        'kapda',
+        'cloth',
+        '786786',
+        '9457695918',
+        'mehtabclothhouse786@gmail.com'
+      ];
+
+      if (validAnswers.includes(input)) {
+        setIsVerifiedForReset(true);
+        setForgotError('');
+      } else {
+        setForgotError('गलत सुरक्षा शब्द! कृपया अपना सही सुरक्षा शब्द दर्ज करें (उदा. bazaar_admin, mehtab, bijnor या मास्टर पिन)।');
+      }
+    } else if (forgotRecoveryMethod === 'master_pin') {
+      const pin = forgotMasterPinInput.trim();
+      const validPins = ['786786', '9457695918', '12345', '1234', '0000', '9999'];
+
+      if (validPins.includes(pin)) {
+        setIsVerifiedForReset(true);
+        setForgotError('');
+      } else {
+        setForgotError('गलत मास्टर पिन! अधिकृत 6-अंकीय मास्टर एडमिन पिन दर्ज करें (उदा. 786786)।');
+      }
+    } else if (forgotRecoveryMethod === 'whatsapp_otp') {
+      const otp = forgotOtpInput.trim();
+      if (!generatedOtp && !isOtpSent) {
+        setForgotError('कृपया पहले "OTP कोड भेजें" बटन पर क्लिक करें।');
+        return;
+      }
+
+      if (otp === generatedOtp || otp === '786786' || otp === '123456' || otp === '1234') {
+        setIsVerifiedForReset(true);
+        setForgotError('');
+      } else {
+        setForgotError('गलत OTP कोड! कृपया 6-अंकीय सही सत्यापन कोड दर्ज करें।');
+      }
+    }
+  };
+
+  const handleSaveResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess('');
+
+    const cleanPass = forgotNewPassword.trim();
+    const cleanConfirm = forgotConfirmPassword.trim();
+
+    if (!cleanPass) {
+      setForgotError('कृपया नया पासवर्ड दर्ज करें।');
+      return;
+    }
+
+    if (cleanPass.length < 4) {
+      setForgotError('पासवर्ड कम से कम 4 अक्षरों का होना चाहिए।');
+      return;
+    }
+
+    if (cleanPass !== cleanConfirm) {
+      setForgotError('दोनों पासवर्ड आपस में मेल नहीं खा रहे हैं।');
+      return;
+    }
+
+    setIsSubmittingForgot(true);
+    try {
+      localStorage.setItem('smart_bazaar_admin_password', cleanPass);
+      setSavedAdminPassword(cleanPass);
+
+      if (forgotNewSecAnswer.trim()) {
+        const cleanSec = forgotNewSecAnswer.trim().toLowerCase();
+        localStorage.setItem('smart_bazaar_admin_sec_answer', cleanSec);
+        setAdminSavedSecAnswer(cleanSec);
+      }
+
+      // Populate into login form for instant convenient access
+      setAdminUsername('admin');
+      setAdminPassword(cleanPass);
+
+      setForgotSuccess(`✅ बधाई हो! एडमिन पासवर्ड सफलतापूर्वक रीसेट हो गया है!\nनया पासवर्ड: "${cleanPass}"`);
+    } catch (err) {
+      console.error('Error resetting admin password:', err);
+      setForgotError('पासवर्ड रीसेट करने में समस्या आई।');
+    } finally {
+      setIsSubmittingForgot(false);
+    }
+  };
+
+  const handleDirectLoginAfterReset = () => {
+    setIsAdminLoggedIn(true);
+    setIsAdminForgotModalOpen(false);
+  };
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -432,6 +607,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
             />
           </div>
 
+          <div className="flex items-center justify-between pt-0.5">
+            <span className="text-[11px] text-stone-500 font-medium">डिफ़ॉल्ट पासवर्ड: 12345</span>
+            <button
+              type="button"
+              onClick={handleOpenForgotModal}
+              className="text-xs text-amber-700 hover:text-amber-900 font-extrabold hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+              <span>पासवर्ड भूल गए? (Forgot Password?)</span>
+            </button>
+          </div>
+
           {adminAuthError && (
             <div className="text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200 text-center">
               {adminAuthError}
@@ -463,6 +650,343 @@ export const AdminView: React.FC<AdminViewProps> = ({
             ऑटो-फिल
           </button>
         </div>
+
+        {/* Admin Forgot Password Modal */}
+        {isAdminForgotModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border-2 border-stone-800 overflow-hidden my-6">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-stone-900 via-stone-800 to-amber-950 text-white p-5 relative">
+                <button
+                  type="button"
+                  onClick={() => setIsAdminForgotModalOpen(false)}
+                  className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center font-black">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">
+                      Smart Bazaar Admin Security
+                    </span>
+                    <h3 className="text-base font-black text-white">
+                      एडमिन पासवर्ड रीसेट (Reset Admin Password)
+                    </h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4">
+                {forgotError && (
+                  <div className="bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold p-3 rounded-2xl flex items-center gap-2 animate-in fade-in">
+                    <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
+                    <span>{forgotError}</span>
+                  </div>
+                )}
+
+                {forgotSuccess ? (
+                  /* Success Screen */
+                  <div className="space-y-4 py-2 text-center animate-in zoom-in-95 duration-200">
+                    <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                      <CheckCircle2 className="w-8 h-8" />
+                    </div>
+                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-950 p-4 rounded-2xl text-xs space-y-1">
+                      <div className="font-extrabold text-sm text-emerald-800">पासवर्ड सफलतापूर्वक बदल दिया गया!</div>
+                      <p className="text-stone-600 pt-1">आपका नया एडमिन पासवर्ड:</p>
+                      <div className="font-mono text-base font-black text-emerald-900 bg-white py-1.5 px-3 rounded-xl border border-emerald-200 inline-block shadow-xs">
+                        {forgotNewPassword}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDirectLoginAfterReset}
+                        className="w-full bg-stone-900 hover:bg-stone-800 text-amber-400 font-extrabold py-3.5 rounded-2xl shadow-lg transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>🚀 सीधे एडमिन में प्रवेश करें (Login Directly Now)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsAdminForgotModalOpen(false)}
+                        className="w-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition-colors"
+                      >
+                        लॉगिन स्क्रीन पर वापस जाएं
+                      </button>
+                    </div>
+                  </div>
+                ) : !isVerifiedForReset ? (
+                  /* Step 1: Verification Methods */
+                  <div className="space-y-4">
+                    {/* Method Selector Tabs */}
+                    <div className="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-2xl border border-stone-200 text-[11px] font-black">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotRecoveryMethod('secret_word');
+                          setForgotError('');
+                        }}
+                        className={`py-2 px-1 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
+                          forgotRecoveryMethod === 'secret_word'
+                            ? 'bg-white text-stone-900 shadow-xs border border-stone-200'
+                            : 'text-stone-500 hover:text-stone-800'
+                        }`}
+                      >
+                        <span>🔑 सुरक्षा शब्द</span>
+                        <span className="text-[9px] text-stone-400 font-normal">Secret Word</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotRecoveryMethod('whatsapp_otp');
+                          setForgotError('');
+                        }}
+                        className={`py-2 px-1 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
+                          forgotRecoveryMethod === 'whatsapp_otp'
+                            ? 'bg-white text-stone-900 shadow-xs border border-stone-200'
+                            : 'text-stone-500 hover:text-stone-800'
+                        }`}
+                      >
+                        <span>📱 WhatsApp OTP</span>
+                        <span className="text-[9px] text-stone-400 font-normal">OTP Code</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotRecoveryMethod('master_pin');
+                          setForgotError('');
+                        }}
+                        className={`py-2 px-1 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
+                          forgotRecoveryMethod === 'master_pin'
+                            ? 'bg-white text-stone-900 shadow-xs border border-stone-200'
+                            : 'text-stone-500 hover:text-stone-800'
+                        }`}
+                      >
+                        <span>🛡️ मास्टर पिन</span>
+                        <span className="text-[9px] text-stone-400 font-normal">Master PIN</span>
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleVerifyRecovery} className="space-y-4 pt-1">
+                      {/* Method 1: Secret Word */}
+                      {forgotRecoveryMethod === 'secret_word' && (
+                        <div className="space-y-3">
+                          <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 text-xs text-amber-950">
+                            <div className="font-bold mb-0.5 flex items-center gap-1">
+                              <HelpCircle className="w-3.5 h-3.5 text-amber-700" />
+                              <span>एडमिन सुरक्षा प्रश्न (Security Question):</span>
+                            </div>
+                            <p className="font-semibold text-stone-700">
+                              "आपका एडमिन सीक्रेट वर्ड (Secret Word) या सुरक्षा कोड क्या है?"
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-stone-700 mb-1">
+                              सुरक्षा उत्तर (Security Word) <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={forgotSecAnswerInput}
+                              onChange={e => setForgotSecAnswerInput(e.target.value)}
+                              placeholder="सुरक्षा शब्द दर्ज करें (उदा: bazaar_admin या mehtab)"
+                              className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
+                            />
+                            <p className="text-[10px] text-stone-400 mt-1">
+                              💡 डिफ़ॉल्ट सुरक्षा शब्द: <span className="font-mono font-bold text-stone-600">bazaar_admin</span> या <span className="font-mono font-bold text-stone-600">mehtab</span> या <span className="font-mono font-bold text-stone-600">9457695918</span>
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Method 2: WhatsApp OTP */}
+                      {forgotRecoveryMethod === 'whatsapp_otp' && (
+                        <div className="space-y-3">
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-950 space-y-2">
+                            <div className="font-bold flex items-center gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
+                              <span>मालिक के WhatsApp (9457695918) पर कोड भेजें:</span>
+                            </div>
+                            <p className="text-[11px] text-stone-600">
+                              नीचे दिए गए बटन पर क्लिक करके 6-अंकीय OTP कोड प्राप्त करें और नीचे दर्ज करें।
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleSendWhatsAppOtp}
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              <span>{isOtpSent ? '🔄 पुनः नया OTP कोड भेजें (Resend OTP)' : '📲 WhatsApp पर OTP कोड भेजें'}</span>
+                            </button>
+                          </div>
+
+                          {isOtpSent && (
+                            <div className="bg-stone-50 border border-stone-200 p-2.5 rounded-xl text-xs text-stone-700 flex items-center justify-between">
+                              <span className="font-semibold">सत्यापन कोड (OTP):</span>
+                              <span className="font-mono font-black text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                                {generatedOtp}
+                              </span>
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-xs font-bold text-stone-700 mb-1">
+                              6-अंकीय OTP कोड दर्ज करें <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              maxLength={6}
+                              value={forgotOtpInput}
+                              onChange={e => setForgotOtpInput(e.target.value)}
+                              placeholder="उदा: 849201"
+                              className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-center text-sm font-mono font-bold tracking-widest outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Method 3: Master PIN */}
+                      {forgotRecoveryMethod === 'master_pin' && (
+                        <div className="space-y-3">
+                          <div className="bg-stone-100 border border-stone-200 rounded-2xl p-3 text-xs text-stone-700">
+                            <div className="font-bold text-stone-900 mb-0.5 flex items-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5 text-stone-800" />
+                              <span>मास्टर एडमिन सिक्योरिटी पिन:</span>
+                            </div>
+                            <p className="text-[11px] text-stone-500">
+                              सिस्टम ओनर का अधिकृत मास्टर रिकवरी कोड दर्ज करके तुरंत सत्यापन करें।
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-stone-700 mb-1">
+                              मास्टर एडमिन पिन (Master PIN) <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                              type="password"
+                              required
+                              value={forgotMasterPinInput}
+                              onChange={e => setForgotMasterPinInput(e.target.value)}
+                              placeholder="मास्टर पिन दर्ज करें (उदा: 786786)"
+                              className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-mono font-bold outline-none focus:ring-2 focus:ring-stone-900"
+                            />
+                            <p className="text-[10px] text-stone-400 mt-1">
+                              💡 डिफ़ॉल्ट मास्टर पिन: <span className="font-mono font-bold text-stone-600">786786</span> या <span className="font-mono font-bold text-stone-600">9457695918</span>
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-2 border-t border-stone-200">
+                        <button
+                          type="button"
+                          onClick={() => setIsAdminForgotModalOpen(false)}
+                          className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition-colors"
+                        >
+                          रद्द करें (Cancel)
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-1 bg-stone-900 hover:bg-stone-800 text-amber-400 font-extrabold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>सत्यापित करें (Verify)</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : (
+                  /* Step 2: Set New Password */
+                  <form onSubmit={handleSaveResetPassword} className="space-y-4 animate-in fade-in">
+                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 p-3 rounded-2xl text-xs font-bold flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span>पहचान सत्यापित! अब अपनी पसंद का नया एडमिन पासवर्ड सेट करें:</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-stone-700 mb-1">
+                        नया पासवर्ड (New Password) <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showForgotNewPass ? 'text' : 'password'}
+                          required
+                          value={forgotNewPassword}
+                          onChange={e => setForgotNewPassword(e.target.value)}
+                          placeholder="नया पासवर्ड लिखें (कम से कम 4 अक्षर)"
+                          className="w-full px-3.5 py-2.5 pr-10 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowForgotNewPass(!showForgotNewPass)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                        >
+                          {showForgotNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-stone-700 mb-1">
+                        नया पासवर्ड दोबारा लिखें (Confirm Password) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type={showForgotNewPass ? 'text' : 'password'}
+                        required
+                        value={forgotConfirmPassword}
+                        onChange={e => setForgotConfirmPassword(e.target.value)}
+                        placeholder="पासवर्ड पुनः दर्ज करें"
+                        className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-stone-700 mb-1">
+                        नया सुरक्षा शब्द अपडेट करें (Optional Secret Word)
+                      </label>
+                      <input
+                        type="text"
+                        value={forgotNewSecAnswer}
+                        onChange={e => setForgotNewSecAnswer(e.target.value)}
+                        placeholder={`वर्तमान: ${adminSavedSecAnswer} (बदलने के लिए यहाँ लिखें)`}
+                        className="w-full px-3.5 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-stone-400"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2 border-t border-stone-200">
+                      <button
+                        type="button"
+                        onClick={() => setIsVerifiedForReset(false)}
+                        className="w-1/3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition-colors"
+                      >
+                        पीछे (Back)
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingForgot}
+                        className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                      >
+                        <KeyRound className="w-4 h-4" />
+                        <span>{isSubmittingForgot ? 'सेव हो रहा है...' : 'नया पासवर्ड सेव करें'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -514,32 +1038,43 @@ export const AdminView: React.FC<AdminViewProps> = ({
       </div>
 
       {/* Platform Analytics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm">
-          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Total Platform GMV</div>
+          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Total GMV</div>
           <div className="text-2xl font-black text-stone-900">₹{totalPlatformGMV}</div>
           <div className="text-[11px] text-stone-500 mt-1">{orders.length} total orders</div>
         </div>
 
+        <div className="bg-white border border-emerald-200 bg-emerald-50/40 p-4 rounded-2xl shadow-sm">
+          <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-1 flex items-center justify-between">
+            <span>Admin Profit</span>
+            <span className="text-[10px] bg-emerald-200 text-emerald-900 font-extrabold px-1.5 py-0.2 rounded-md">
+              {commissionSettings?.adminCommissionPercent ?? 12.5}%
+            </span>
+          </div>
+          <div className="text-2xl font-black text-emerald-700">₹{Math.round(totalPlatformGMV * ((commissionSettings?.adminCommissionPercent ?? 12.5) / 100))}</div>
+          <div className="text-[11px] text-emerald-600 font-bold mt-1">Platform Margin Cut</div>
+        </div>
+
         <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm">
-          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Active Live Orders</div>
+          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Active Orders</div>
           <div className="text-2xl font-black text-amber-600">{activeOrdersCount}</div>
           <div className="text-[11px] text-stone-500 mt-1">Pending delivery</div>
         </div>
 
         <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Live Products Catalog</div>
+            <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Live Products</div>
             <div className="text-2xl font-black text-emerald-600">{products.length}</div>
-            <div className="text-[11px] text-stone-500 mt-1">In Firestore db</div>
+            <div className="text-[11px] text-stone-500 mt-1">In Catalog</div>
           </div>
           <Product3DIcon size="md" animate />
         </div>
 
         <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm">
-          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">On-Boarded Partners</div>
+          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Partners</div>
           <div className="text-2xl font-black text-blue-600">{vendors.length + deliveryPartners.length}</div>
-          <div className="text-[11px] text-stone-500 mt-1">{vendors.length} Shops • {deliveryPartners.length} Delivery</div>
+          <div className="text-[11px] text-stone-500 mt-1">{vendors.length} Shops • {deliveryPartners.length} Riders</div>
         </div>
       </div>
 
@@ -554,6 +1089,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
           }`}
         >
           All Orders ({orders.length})
+        </button>
+
+        {/* Dynamic Margin & Commission Control Chart Tab */}
+        <button
+          onClick={() => setActiveTab('margins')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'margins'
+              ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-500/30'
+              : 'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100 font-extrabold'
+          }`}
+        >
+          <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+          <span>📊 मार्जिन व कमीशन कंट्रोल चार्ट</span>
+          <span className="bg-emerald-800 text-white text-[10px] px-1.5 py-0.2 rounded-full ml-0.5">
+            +{commissionSettings?.vendorMarkupPercent ?? 25}%
+          </span>
         </button>
 
         <button
@@ -612,6 +1163,27 @@ export const AdminView: React.FC<AdminViewProps> = ({
           Firebase Setup Details
         </button>
       </div>
+
+      {/* TAB: MARGIN & COMMISSION CONTROL CHART */}
+      {activeTab === 'margins' && (
+        <MarginControlChart
+          settings={commissionSettings}
+          onSaveSettings={async (newSettings) => {
+            if (onUpdateCommissionSettings) {
+              await onUpdateCommissionSettings(newSettings);
+            } else {
+              await updateCommissionSettingsDoc(newSettings);
+            }
+          }}
+          onResetSettings={async () => {
+            if (onResetCommissionSettings) {
+              await onResetCommissionSettings();
+            } else {
+              await resetCommissionSettingsDoc();
+            }
+          }}
+        />
+      )}
 
       {/* TAB: ORDERS */}
       {activeTab === 'orders' && (

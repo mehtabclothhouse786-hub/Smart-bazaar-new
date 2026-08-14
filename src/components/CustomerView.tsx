@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product, CartItem, Order, Vendor, ServiceProvider, ServiceBooking, CustomerUser, OldItem } from '../types';
+import { Product, CartItem, Order, Vendor, ServiceProvider, ServiceBooking, CustomerUser, OldItem, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from '../types';
 import { 
   Plus, 
   Minus, 
@@ -39,6 +39,7 @@ interface CustomerViewProps {
   products: Product[];
   vendors: Vendor[];
   cart: CartItem[];
+  commissionSettings?: CommissionSettings;
   onAddToCart: (product: Product) => void;
   onUpdateCartQty: (productId: string, delta: number) => void;
   onClearCart: () => void;
@@ -80,6 +81,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   products = [],
   vendors = [],
   cart = [],
+  commissionSettings = DEFAULT_COMMISSION_SETTINGS,
   onAddToCart,
   onUpdateCartQty,
   onClearCart,
@@ -150,11 +152,13 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     }
   }, [isCartOpen]);
 
-  // Cart math
+  // Cart math with dynamic CommissionSettings
   const cartSubtotal = (cart || []).reduce((sum, item) => sum + ((item?.product?.price || 0) * (item?.quantity || 1)), 0);
   const hasPlatformItems = (cart || []).some(item => item?.product?.deliveryMode === 'platform');
   const hasSelfOnlyItems = (cart || []).length > 0 && (cart || []).every(item => item?.product?.deliveryMode === 'self');
-  const deliveryFee = hasPlatformItems ? (cartSubtotal >= 999 ? 0 : 40) : 0;
+  const baseDeliveryCharge = commissionSettings?.customerDeliveryFee ?? 40;
+  const freeDeliveryThreshold = commissionSettings?.freeDeliveryThreshold ?? 500;
+  const deliveryFee = hasPlatformItems ? (cartSubtotal >= freeDeliveryThreshold ? 0 : baseDeliveryCharge) : 0;
   const grandTotal = cartSubtotal + deliveryFee;
 
   const selectedVendor = (vendors || []).find(v => v.id === selectedVendorId);

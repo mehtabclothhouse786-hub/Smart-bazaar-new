@@ -11,7 +11,7 @@ import {
   query,
   where 
 } from '../firebase';
-import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser, OldItem } from '../types';
+import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser, OldItem, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from '../types';
 
 const PRODUCTS_COL = 'products';
 const ORDERS_COL = 'orders';
@@ -22,8 +22,9 @@ const SERVICE_BOOKINGS_COL = 'serviceBookings';
 const CUSTOMERS_COL = 'customers';
 const OLD_ITEMS_COL = 'oldItems';
 const ADMIN_COL = 'adminSettings';
+const PRICING_CONFIG_DOC = 'pricingConfig';
 
-// Pricing and commission rates
+// Default / fallback pricing and commission rates
 export const MARKUP_RATE = 0.25; // +25% automatically added to vendor rate
 export const ADMIN_COMMISSION_RATE = 0.125; // 12.5%
 export const PARTNER_COMMISSION_RATE = 0.125; // 12.5%
@@ -883,10 +884,12 @@ export async function updateServiceBookingStatus(bookingId: string, status: 'Boo
 export async function updateServiceBookingBill(
   bookingId: string, 
   materialCost: number, 
-  visitFee: number = 100
+  visitFee: number = 100,
+  settings?: CommissionSettings
 ) {
   const subtotal = visitFee + materialCost;
-  const platformFee = Math.round(subtotal * 0.10); // 10%
+  const marginPercent = settings?.servicePlatformFeePercent ?? 10;
+  const platformFee = Math.round(subtotal * (marginPercent / 100));
   const finalBillAmount = subtotal + platformFee;
   const updates: Partial<ServiceBooking> = {
     visitFee,
@@ -1093,6 +1096,7 @@ export async function restoreAllDefaults(): Promise<void> {
     setLocalData(ORDERS_COL, []);
     setLocalData(SERVICE_BOOKINGS_COL, []);
     setLocalData('customers_map', {});
+    setLocalData(ADMIN_COL, DEFAULT_COMMISSION_SETTINGS);
 
     // 2. Reseed Firestore
     await seedProducts();
@@ -1101,7 +1105,166 @@ export async function restoreAllDefaults(): Promise<void> {
     await seedServices();
     await seedOldItems();
     await seedCustomers();
+    await updateCommissionSettingsDoc(DEFAULT_COMMISSION_SETTINGS);
   } catch (e) {
     console.error('Error restoring all defaults:', e);
   }
+}
+
+// ----------------------------------------------------
+// DYNAMIC ADMIN MARGIN & COMMISSION CONTROL FUNCTIONS
+// ----------------------------------------------------
+
+/**
+ * Subscribe to Admin Margin & Commission Settings in real-time.
+ * Automatically synchronizes with Firestore doc 'adminSettings/pricingConfig'
+ * with local fallback support.
+ */
+export function subscribeCommissionSettings(onUpdate: (settings: CommissionSettings) => void): () => void {
+  try {
+    const configDocRef = doc(db, ADMIN_COL, PRICING_CONFIG_DOC);
+    return onSnapshot(configDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as CommissionSettings;
+        const merged: CommissionSettings = {
+          ...DEFAULT_COMMISSION_SETTINGS,
+          ...data,
+          vendorMarkupPercent: Number(data.vendorMarkupPercent ?? DEFAULT_COMMISSION_SETTINGS.vendorMarkupPercent),
+          adminCommissionPercent: Number(data.adminCommissionPercent ?? DEFAULT_COMMISSION_SETTINGS.adminCommissionPercent),
+          deliveryPartnerBasePay: Number(data.deliveryPartnerBasePay ?? DEFAULT_COMMISSION_SETTINGS.deliveryPartnerBasePay),
+          deliveryPartnerCommissionPercent: Number(data.deliveryPartnerCommissionPercent ?? DEFAULT_COMMISSION_SETTINGS.deliveryPartnerCommissionPercent),
+          deliveryPartnerPayType: data.deliveryPartnerPayType || DEFAULT_COMMISSION_SETTINGS.deliveryPartnerPayType,
+          customerDeliveryFee: Number(data.customerDeliveryFee ?? DEFAULT_COMMISSION_SETTINGS.customerDeliveryFee),
+          freeDeliveryThreshold: Number(data.freeDeliveryThreshold ?? DEFAULT_COMMISSION_SETTINGS.freeDeliveryThreshold),
+          servicePlatformFeePercent: Number(data.servicePlatformFeePercent ?? DEFAULT_COMMISSION_SETTINGS.servicePlatformFeePercent),
+          oldItemAdminMarginPercent: Number(data.oldItemAdminMarginPercent ?? DEFAULT_COMMISSION_SETTINGS.oldItemAdminMarginPercent),
+          smartDeliveryUpi: data.smartDeliveryUpi || DEFAULT_COMMISSION_SETTINGS.smartDeliveryUpi,
+          updatedAt: data.updatedAt || Date.now()
+        };
+        setLocalData(ADMIN_COL, merged);
+        onUpdate(merged);
+      } else {
+        // Doc doesn't exist yet, seed default
+        const local = getLocalData<CommissionSettings>(ADMIN_COL, DEFAULT_COMMISSION_SETTINGS);
+        setDoc(configDocRef, sanitizeForFirestore({ ...local, updatedAt: Date.now() })).catch(() => {});
+        onUpdate(local);
+      }
+    }, (err) => {
+      console.warn('Firestore pricingConfig subscribe error, using fallback:', err);
+      onUpdate(getLocalData<CommissionSettings>(ADMIN_COL, DEFAULT_COMMISSION_SETTINGS));
+    });
+  } catch (e) {
+    onUpdate(getLocalData<CommissionSettings>(ADMIN_COL, DEFAULT_COMMISSION_SETTINGS));
+    return () => {};
+  }
+}
+
+/**
+ * Update Admin Margin & Commission Control settings in Firestore & Local storage.
+ */
+export async function updateCommissionSettingsDoc(updates: Partial<CommissionSettings>): Promise<void> {
+  const current = getLocalData<CommissionSettings>(ADMIN_COL, DEFAULT_COMMISSION_SETTINGS);
+  const merged: CommissionSettings = {
+    ...current,
+    ...updates,
+    updatedAt: Date.now()
+  };
+  const cleanDoc = sanitizeForFirestore(merged);
+
+  try {
+    const configDocRef = doc(db, ADMIN_COL, PRICING_CONFIG_DOC);
+    await setDoc(configDocRef, cleanDoc, { merge: true });
+    setLocalData(ADMIN_COL, merged);
+  } catch (e) {
+    console.error('Error updating pricing config doc:', e);
+    setLocalData(ADMIN_COL, merged);
+  }
+}
+
+/**
+ * Reset commission settings back to default.
+ */
+export async function resetCommissionSettingsDoc(): Promise<void> {
+  await updateCommissionSettingsDoc(DEFAULT_COMMISSION_SETTINGS);
+}
+
+// ----------------------------------------------------
+// CALCULATION HELPERS BASED ON ACTIVE SETTINGS
+// ----------------------------------------------------
+
+/**
+ * Calculate Customer Retail Price from Vendor Cost Price using dynamic markup %
+ */
+export function calculateCustomerPrice(costPrice: number, settings?: CommissionSettings): number {
+  const markup = (settings?.vendorMarkupPercent ?? 25) / 100;
+  return Math.round(costPrice * (1 + markup));
+}
+
+/**
+ * Calculate Vendor Cost Price from Customer Retail Price
+ */
+export function calculateVendorCostPrice(retailPrice: number, settings?: CommissionSettings): number {
+  const markup = (settings?.vendorMarkupPercent ?? 25) / 100;
+  return Math.round(retailPrice / (1 + markup));
+}
+
+/**
+ * Calculate Admin Commission amount from Order Total GMV
+ */
+export function calculateAdminCommissionAmount(orderTotal: number, settings?: CommissionSettings): number {
+  const rate = (settings?.adminCommissionPercent ?? 12.5) / 100;
+  return Math.round(orderTotal * rate);
+}
+
+/**
+ * Calculate Delivery Partner Commission / Payout for an Order
+ */
+export function calculateDeliveryPartnerPayout(orderTotal: number, settings?: CommissionSettings): number {
+  if (settings?.deliveryPartnerPayType === 'percent_of_order') {
+    const rate = (settings?.deliveryPartnerCommissionPercent ?? 12.5) / 100;
+    return Math.round(orderTotal * rate);
+  }
+  return settings?.deliveryPartnerBasePay ?? 50;
+}
+
+export const calculateDeliveryPartnerPayoutAmount = calculateDeliveryPartnerPayout;
+
+/**
+ * Calculate Customer Delivery Fee based on Subtotal & Free Delivery Threshold
+ */
+export function calculateCustomerDeliveryCharge(subtotal: number, settings?: CommissionSettings): number {
+  const threshold = settings?.freeDeliveryThreshold ?? 500;
+  const fee = settings?.customerDeliveryFee ?? 40;
+  return subtotal >= threshold ? 0 : fee;
+}
+
+/**
+ * Calculate Home Service bill amounts with dynamic platform fee
+ */
+export function calculateServiceBill(visitFee: number, materialCost: number, settings?: CommissionSettings) {
+  const subtotal = visitFee + materialCost;
+  const feePercent = (settings?.servicePlatformFeePercent ?? 10) / 100;
+  const platformFee = Math.round(subtotal * feePercent);
+  const finalBillAmount = subtotal + platformFee;
+  return {
+    subtotal,
+    platformFee,
+    finalBillAmount,
+    platformFeePercent: settings?.servicePlatformFeePercent ?? 10
+  };
+}
+
+/**
+ * Calculate Old Items listing price with dynamic admin margin
+ */
+export function calculateOldItemPricing(sellerPrice: number, settings?: CommissionSettings) {
+  const marginPercent = (settings?.oldItemAdminMarginPercent ?? 10) / 100;
+  const adminMargin = Math.round(sellerPrice * marginPercent);
+  const finalCustomerPrice = sellerPrice + adminMargin;
+  return {
+    sellerPrice,
+    adminMargin,
+    finalCustomerPrice,
+    marginPercent: settings?.oldItemAdminMarginPercent ?? 10
+  };
 }

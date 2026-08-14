@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product, Order, Vendor, OrderStatus, ServiceProvider, ServiceBooking } from '../types';
+import { Product, Order, Vendor, OrderStatus, ServiceProvider, ServiceBooking, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from '../types';
 import { 
   Store, 
   Plus, 
@@ -23,7 +23,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE, updateVendorPasswordDoc, updateVendorDoc, SAMPLE_VENDORS } from '../services/db';
+import { updateVendorPasswordDoc, updateVendorDoc, SAMPLE_VENDORS } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { Product3DIcon } from './Product3DIcon';
@@ -35,6 +35,7 @@ interface VendorViewProps {
   vendors: Vendor[];
   products: Product[];
   orders: Order[];
+  commissionSettings?: CommissionSettings;
   onAddProduct: (product: Omit<Product, 'id'>) => Promise<string>;
   onUpdateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   onDeleteProduct: (id: string) => Promise<void>;
@@ -50,6 +51,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
   vendors = [],
   products = [],
   orders = [],
+  commissionSettings = DEFAULT_COMMISSION_SETTINGS,
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
@@ -248,16 +250,21 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
   const pendingOrders = vendorOrders.filter(o => o.status !== 'Delivered' && o.status !== 'Settlement Completed' && o.status !== 'Cancelled');
   
+  // Dynamic markup and commission rates from settings
+  const vendorMarkupPercent = commissionSettings?.vendorMarkupPercent ?? 25;
+  const adminCommissionPercent = commissionSettings?.adminCommissionPercent ?? 12.5;
+  const partnerCommissionPercent = commissionSettings?.deliveryPartnerCommissionPercent ?? 12.5;
+
   // Vendor Settlements Math: Total Cost Price owed to Vendor
   const totalVendorEarned = vendorOrders.reduce((sum, order) => {
     const vSubtotalCost = order.items
       .filter(item => item.product.vendorId === currentVendor.id || item.product.vendorName === currentVendor.shopName)
-      .reduce((itemSum, item) => itemSum + ((item.product.costPrice || (item.product.price / 1.25)) * item.quantity), 0);
+      .reduce((itemSum, item) => itemSum + ((item.product.costPrice || (item.product.price / (1 + (vendorMarkupPercent / 100)))) * item.quantity), 0);
     return sum + vSubtotalCost;
   }, 0);
 
-  // Auto-calculated Customer Price (+25% Markup)
-  const calculatedCustomerPrice = Math.round(prodCostPrice * (1 + MARKUP_RATE));
+  // Auto-calculated Customer Price (+Dynamic Markup)
+  const calculatedCustomerPrice = Math.round(prodCostPrice * (1 + (vendorMarkupPercent / 100)));
 
   // Handle Login
   const handleVendorLogin = (e: React.FormEvent) => {
@@ -375,7 +382,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
     setIsSubmitting(true);
     try {
-      const finalCustPrice = Math.round(prodCostPrice * (1 + MARKUP_RATE));
+      const finalCustPrice = Math.round(prodCostPrice * (1 + (vendorMarkupPercent / 100)));
       const finalCategory = isCustomProdCategory ? (customProdCategory.trim() || 'General') : prodCategory;
       const finalUnit = isCustomUnit ? (customUnitInput.trim() || '1 piece') : prodUnit;
       await onAddProduct({
@@ -1181,12 +1188,12 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
                   <div className="pt-2 border-t border-emerald-200/80 text-xs font-bold text-emerald-900 space-y-1">
                     <div className="flex justify-between">
-                      <span>ग्राहक मूल्य (+25% स्वचालित मार्जिन):</span>
+                      <span>ग्राहक मूल्य (+{vendorMarkupPercent}% स्वचालित मार्जिन):</span>
                       <span className="font-extrabold text-base text-emerald-950">₹{calculatedCustomerPrice}</span>
                     </div>
                     <div className="text-[11px] font-medium text-emerald-800">
-                      • एडमिन कमीशन (12.5%): ₹{Math.round(prodCostPrice * ADMIN_COMMISSION_RATE)} <br />
-                      • डिलीवरी पार्टनर कमीशन (12.5%): ₹{Math.round(prodCostPrice * PARTNER_COMMISSION_RATE)}
+                      • एडमिन कमीशन ({adminCommissionPercent}%): ₹{Math.round(calculatedCustomerPrice * (adminCommissionPercent / 100))} <br />
+                      • डिलीवरी पार्टनर ({commissionSettings?.deliveryPartnerPayType === 'fixed_per_order' ? `₹${commissionSettings?.deliveryPartnerBasePay ?? 50}/ऑर्डर` : `${partnerCommissionPercent}%`})
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ServiceProvider, ServiceBooking, CustomerUser } from '../types';
+import { ServiceProvider, ServiceBooking, CustomerUser, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from '../types';
 import { updateServiceBookingBill } from '../services/db';
 import { shareServiceToWhatsApp } from '../utils/whatsappShare';
 import { 
@@ -40,6 +40,7 @@ import { motion, AnimatePresence } from 'motion/react';
 interface ServicesPanelProps {
   services: ServiceProvider[];
   serviceBookings: ServiceBooking[];
+  commissionSettings?: CommissionSettings;
   onAddService: (service: Omit<ServiceProvider, 'id'>) => Promise<string>;
   onDeleteService?: (serviceId: string) => Promise<void>;
   onCreateBooking: (booking: Omit<ServiceBooking, 'id'>) => Promise<string>;
@@ -89,6 +90,7 @@ export const getServiceCategoryBadge = (category: string = '') => {
 export const ServicesPanel: React.FC<ServicesPanelProps> = ({
   services = [],
   serviceBookings = [],
+  commissionSettings = DEFAULT_COMMISSION_SETTINGS,
   onAddService,
   onDeleteService,
   onCreateBooking,
@@ -154,10 +156,11 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
     setIsSavingBill(true);
     try {
       const numMat = Math.max(0, Number(materialCostInput) || 0);
-      await updateServiceBookingBill(bookingId, numMat, 100);
+      const serviceMargin = commissionSettings?.servicePlatformFeePercent ?? 10;
+      await updateServiceBookingBill(bookingId, numMat, 100, commissionSettings);
       setBillingLeadId(null);
       setMaterialCostInput('');
-      alert('✅ ग्राहक का सर्विस बिल (₹100 Per Call + सामान + 10% मार्जिन) सफलतापूर्वक जनरेट हो गया!');
+      alert(`✅ ग्राहक का सर्विस बिल (₹100 Per Call + सामान + ${serviceMargin}% मार्जिन) सफलतापूर्वक जनरेट हो गया!`);
     } catch (err) {
       console.error('Error saving service bill:', err);
       alert('बिल सहेजने में त्रुटि हुई।');
@@ -167,10 +170,11 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
   };
 
   const handleShareBillWhatsApp = (lead: ServiceBooking) => {
+    const serviceMargin = commissionSettings?.servicePlatformFeePercent ?? 10;
     const visit = lead.visitFee || 100;
     const mat = lead.materialCost || 0;
     const sub = lead.subtotal || (visit + mat);
-    const fee = lead.platformFee || Math.round(sub * 0.10);
+    const fee = lead.platformFee || Math.round(sub * (serviceMargin / 100));
     const total = lead.finalBillAmount || (sub + fee);
 
     const text = `🧾 *स्मार्ट बाजार - सर्विस बिल रसीद*
@@ -914,11 +918,12 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
           ) : (
             <div className="space-y-4">
               {serviceBookings.map((lead) => {
+                const serviceMargin = commissionSettings?.servicePlatformFeePercent ?? 10;
                 const isFormOpen = billingLeadId === lead.id;
                 const numMat = Math.max(0, Number(materialCostInput) || 0);
                 const visit = 100;
                 const calcSub = visit + numMat;
-                const calcFee = Math.round(calcSub * 0.10);
+                const calcFee = Math.round(calcSub * (serviceMargin / 100));
                 const calcTotal = calcSub + calcFee;
 
                 return (
@@ -969,7 +974,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                           className="bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs px-3.5 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
                         >
                           <Receipt className="w-4 h-4" />
-                          <span>{lead.finalBillAmount ? 'बिल संशोधित करें' : '🧾 बिल जनरेट करें (+10%)'}</span>
+                          <span>{lead.finalBillAmount ? 'बिल संशोधित करें' : `🧾 बिल जनरेट करें (+${serviceMargin}%)`}</span>
                         </button>
                       </div>
                     </div>
@@ -1002,8 +1007,8 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                             <span className="font-extrabold text-stone-900 text-xs">₹{lead.materialCost || 0}</span>
                           </div>
                           <div className="bg-white/90 p-2 rounded-xl border border-emerald-200 shadow-2xs">
-                            <span className="text-[10px] text-stone-500 block">3. 10% मार्जिन शुल्क</span>
-                            <span className="font-extrabold text-emerald-800 text-xs">₹{lead.platformFee || Math.round(((lead.visitFee || 100) + (lead.materialCost || 0)) * 0.10)}</span>
+                            <span className="text-[10px] text-stone-500 block">3. {serviceMargin}% मार्जिन शुल्क</span>
+                            <span className="font-extrabold text-emerald-800 text-xs">₹{lead.platformFee || Math.round(((lead.visitFee || 100) + (lead.materialCost || 0)) * (serviceMargin / 100))}</span>
                           </div>
                           <div className="bg-emerald-700 text-white p-2 rounded-xl shadow-xs">
                             <span className="text-[10px] text-emerald-100 block font-bold">कुल देय ग्राहक बिल</span>
@@ -1020,7 +1025,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                           <div className="flex items-center gap-2">
                             <Calculator className="w-5 h-5 text-amber-700" />
                             <h4 className="font-black text-amber-950 text-sm">
-                              सर्विस बिल सेक्शन (Per Call ₹100 + सामान का बिल + 10%)
+                              सर्विस बिल सेक्शन (Per Call ₹100 + सामान का बिल + {serviceMargin}%)
                             </h4>
                           </div>
                           <button
@@ -1055,7 +1060,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                               className="w-full px-3 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-sm font-extrabold outline-none focus:ring-2 focus:ring-amber-500"
                             />
                             <span className="text-[10px] text-stone-500 font-semibold block mt-1">
-                              केवल सामान/सामग्री का बिल भरें, 10% शुल्क ऑटोमैटिक जुड़ेगा।
+                              केवल सामान/सामग्री का बिल भरें, {serviceMargin}% शुल्क ऑटोमैटिक जुड़ेगा।
                             </span>
                           </div>
                         </div>
@@ -1065,7 +1070,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                           <div className="text-[11px] font-bold text-amber-400 flex items-center justify-between border-b border-stone-800 pb-1.5">
                             <span>ऑटोमैटिक बिल कैलकुलेशन (Auto Invoice Preview):</span>
                             <span className="bg-amber-400 text-stone-950 px-2 py-0.5 rounded-md font-black text-[10px]">
-                              10% Margin Added
+                              {serviceMargin}% Margin Added
                             </span>
                           </div>
 
@@ -1083,7 +1088,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                               <span>₹{calcSub}</span>
                             </div>
                             <div className="flex justify-between text-emerald-400 font-bold">
-                              <span>• स्मार्ट बाजार 10% सेवा शुल्क (+10%):</span>
+                              <span>• स्मार्ट बाजार {serviceMargin}% सेवा शुल्क (+{serviceMargin}%):</span>
                               <span>+ ₹{calcFee}</span>
                             </div>
                           </div>

@@ -172,3 +172,33 @@ export interface OldItem {
   sellerUserId?: string;
 }
 
+export interface CommissionSettings {
+  vendorMarkupPercent: number; // e.g. 25 (% added to vendor cost price to get customer retail price)
+  adminCommissionPercent: number; // e.g. 12.5 (% admin platform share)
+  deliveryPartnerBasePay: number; // e.g. 50 (₹ per delivery base payout to rider)
+  deliveryPartnerCommissionPercent: number; // e.g. 12.5 (% share of order)
+  deliveryPartnerPayType: 'fixed_per_order' | 'percent_of_order'; // default 'fixed_per_order'
+  customerDeliveryFee: number; // e.g. 40 (₹ standard customer delivery fee)
+  freeDeliveryThreshold: number; // e.g. 500 (₹ free delivery above this amount)
+  servicePlatformFeePercent: number; // e.g. 10 (%) platform fee on Home Service bookings
+  oldItemAdminMarginPercent: number; // e.g. 10 (%) admin margin on 2nd Hand / Old Items
+  smartDeliveryUpi: string; // e.g. '9457695918@airtel'
+  updatedAt?: number;
+  updatedBy?: string;
+}
+
+export const DEFAULT_COMMISSION_SETTINGS: CommissionSettings = {
+  vendorMarkupPercent: 25,
+  adminCommissionPercent: 12.5,
+  deliveryPartnerBasePay: 50,
+  deliveryPartnerCommissionPercent: 12.5,
+  deliveryPartnerPayType: 'fixed_per_order',
+  customerDeliveryFee: 40,
+  freeDeliveryThreshold: 500,
+  servicePlatformFeePercent: 10,
+  oldItemAdminMarginPercent: 10,
+  smartDeliveryUpi: '9457695918@airtel',
+  updatedAt: Date.now(),
+  updatedBy: 'Admin'
+};
+

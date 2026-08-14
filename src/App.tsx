@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserRole, Product, CartItem, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser, OldItem } from './types';
+import { UserRole, Product, CartItem, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser, OldItem, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from './types';
 import { 
   subscribeProducts, 
   subscribeOrders, 
@@ -8,6 +8,9 @@ import {
   subscribeServices,
   subscribeServiceBookings,
   subscribeOldItems,
+  subscribeCommissionSettings,
+  updateCommissionSettingsDoc,
+  resetCommissionSettingsDoc,
   addProductDoc,
   updateProductDoc,
   deleteProductDoc,
@@ -53,6 +56,7 @@ export default function App() {
   const [services, setServices] = useState<ServiceProvider[]>([]);
   const [serviceBookings, setServiceBookings] = useState<ServiceBooking[]>([]);
   const [oldItems, setOldItems] = useState<OldItem[]>([]);
+  const [commissionSettings, setCommissionSettings] = useState<CommissionSettings>(DEFAULT_COMMISSION_SETTINGS);
 
   // Customer authentication state
   const [customerUser, setCustomerUser] = useState<CustomerUser | null>(() => {
@@ -189,6 +193,7 @@ export default function App() {
     const unsubServices = subscribeServices((data) => setServices(data));
     const unsubBookings = subscribeServiceBookings((data) => setServiceBookings(data));
     const unsubOldItems = subscribeOldItems((data) => setOldItems(data));
+    const unsubSettings = subscribeCommissionSettings((settings) => setCommissionSettings(settings));
 
     return () => {
       unsubProducts();
@@ -198,6 +203,7 @@ export default function App() {
       unsubServices();
       unsubBookings();
       unsubOldItems();
+      unsubSettings();
     };
   }, []);
 
@@ -472,6 +478,7 @@ export default function App() {
             products={products}
             vendors={vendors}
             cart={cart}
+            commissionSettings={commissionSettings}
             onAddToCart={handleAddToCart}
             onUpdateCartQty={handleUpdateCartQty}
             onClearCart={handleClearCart}
@@ -501,6 +508,7 @@ export default function App() {
         {currentRole === 'old_items' && (
           <OldItemsPanel
             oldItems={oldItems}
+            commissionSettings={commissionSettings}
             onAddOldItem={handleAddOldItem}
             onUpdateOldItem={handleUpdateOldItem}
             onDeleteOldItem={handleDeleteOldItem}
@@ -515,6 +523,7 @@ export default function App() {
             vendors={vendors}
             products={products}
             orders={orders}
+            commissionSettings={commissionSettings}
             onAddProduct={handleAddProduct}
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
@@ -531,6 +540,7 @@ export default function App() {
           <DeliveryView
             deliveryPartners={deliveryPartners}
             orders={orders}
+            commissionSettings={commissionSettings}
             onUpdateOrderStatus={handleUpdateOrderStatus}
             onUpdatePartnerStatus={handleUpdatePartnerStatus}
             onAddDeliveryPartner={handleAddDeliveryPartner}
@@ -541,6 +551,7 @@ export default function App() {
           <ServicesPanel
             services={services}
             serviceBookings={serviceBookings}
+            commissionSettings={commissionSettings}
             onAddService={handleAddService}
             onDeleteService={handleDeleteService}
             onCreateBooking={handleCreateBooking}
@@ -557,6 +568,9 @@ export default function App() {
             vendors={vendors}
             deliveryPartners={deliveryPartners}
             services={services}
+            commissionSettings={commissionSettings}
+            onUpdateCommissionSettings={updateCommissionSettingsDoc}
+            onResetCommissionSettings={resetCommissionSettingsDoc}
             onUpdateOrderStatus={handleUpdateOrderStatus}
             onDeleteProduct={handleDeleteProduct}
             onAddVendor={handleAddVendor}

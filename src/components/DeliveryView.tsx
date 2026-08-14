@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DeliveryPartner, Order, OrderStatus } from '../types';
+import { DeliveryPartner, Order, OrderStatus, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from '../types';
 import { 
   Truck, 
   MapPin, 
@@ -24,12 +24,13 @@ import {
   KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { updatePartnerPasswordDoc, updateDeliveryPartnerDoc, SAMPLE_DELIVERY_PARTNERS } from '../services/db';
+import { updatePartnerPasswordDoc, updateDeliveryPartnerDoc, SAMPLE_DELIVERY_PARTNERS, calculateDeliveryPartnerPayoutAmount } from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface DeliveryViewProps {
   deliveryPartners: DeliveryPartner[];
   orders: Order[];
+  commissionSettings?: CommissionSettings;
   onUpdateOrderStatus: (orderId: string, status: OrderStatus, extra?: Partial<Order>) => Promise<void>;
   onUpdatePartnerStatus: (partnerId: string, status: 'Online' | 'Offline' | 'Busy') => Promise<void>;
   onAddDeliveryPartner?: (partner: Omit<DeliveryPartner, 'id'>) => Promise<string>;
@@ -38,6 +39,7 @@ interface DeliveryViewProps {
 export const DeliveryView: React.FC<DeliveryViewProps> = ({
   deliveryPartners = [],
   orders = [],
+  commissionSettings = DEFAULT_COMMISSION_SETTINGS,
   onUpdateOrderStatus,
   onUpdatePartnerStatus,
   onAddDeliveryPartner
@@ -186,8 +188,11 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     (o.status === 'Delivered' || o.status === 'Settlement Completed') && o.deliveryPartnerId === currentPartner.id
   );
 
-  // Calculate earnings and COD cash collected
-  const totalCommissionEarned = currentPartner.earnings + (completedOrders.length * 50);
+  // Calculate dynamic earnings based on CommissionSettings and COD cash collected
+  const totalCommissionEarned = currentPartner.earnings + completedOrders.reduce((sum, o) => {
+    return sum + (o.deliveryCommission || calculateDeliveryPartnerPayoutAmount(o.totalAmount, commissionSettings));
+  }, 0);
+
   const totalCodCashCollected = completedOrders
     .filter(o => o.paymentMode === 'cod' || !o.paymentMode)
     .reduce((sum, o) => sum + o.totalAmount, 0);
@@ -274,7 +279,8 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
       setOtpModalOrderId(null);
       setOtpInput('');
       setOtpError('');
-      alert(`🎉 डिलीवरी सफलतापूर्वक सत्यापित!\n₹50 कमीशन आपके वॉलेट में जोड़ दिया गया है।${targetOrder.paymentMode === 'cod' ? `\n💵 नकद ₹${targetOrder.totalAmount} ग्राहक से प्राप्त करें।` : ''}`);
+      const earnedThisDelivery = calculateDeliveryPartnerPayoutAmount(targetOrder.totalAmount, commissionSettings);
+      alert(`🎉 डिलीवरी सफलतापूर्वक सत्यापित!\n₹${earnedThisDelivery} कमीशन आपके वॉलेट में जोड़ दिया गया है।${targetOrder.paymentMode === 'cod' ? `\n💵 नकद ₹${targetOrder.totalAmount} ग्राहक से प्राप्त करें।` : ''}`);
     } catch (err) {
       console.error('Error completing order delivery:', err);
     }
@@ -834,7 +840,10 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
             <div className="text-4xl font-black mb-2">₹{totalCommissionEarned}</div>
             <p className="text-xs text-stone-400 mb-6">
-              प्रत्येक पूर्ण डिलीवरी के लिए ₹50 कमीशन राशि आपके खाते में जुड़ती है।
+              {commissionSettings?.deliveryPartnerPayType === 'fixed_per_order' 
+                ? `प्रत्येक पूर्ण डिलीवरी के लिए ₹${commissionSettings?.deliveryPartnerBasePay ?? 50} कमीशन राशि आपके खाते में जुड़ती है।`
+                : `प्रत्येक पूर्ण डिलीवरी पर बिल राशि का ${commissionSettings?.deliveryPartnerCommissionPercent ?? 12.5}% कमीशन आपके खाते में जुड़ता है।`
+              }
             </p>
 
             <button

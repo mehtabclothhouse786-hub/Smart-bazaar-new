@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { OldItem, CustomerUser } from '../types';
+import { OldItem, CustomerUser, CommissionSettings, DEFAULT_COMMISSION_SETTINGS } from '../types';
 import { shareOldItemToWhatsApp } from '../utils/whatsappShare';
 import { 
   Plus, 
@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface OldItemsPanelProps {
   oldItems: OldItem[];
+  commissionSettings?: CommissionSettings;
   onAddOldItem: (item: Omit<OldItem, 'id'>) => Promise<string>;
   onUpdateOldItem: (id: string, updates: Partial<OldItem>) => Promise<void>;
   onDeleteOldItem: (id: string) => Promise<void>;
@@ -68,6 +69,7 @@ const DEFAULT_CATEGORY_IMAGES: Record<string, string> = {
 
 export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
   oldItems = [],
+  commissionSettings = DEFAULT_COMMISSION_SETTINGS,
   onAddOldItem,
   onUpdateOldItem,
   onDeleteOldItem,
@@ -160,7 +162,8 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
       const finalImg = imagePreview || fallbackImg;
 
       const numSellerPrice = Number(price);
-      const adminMarginAmount = Math.round(numSellerPrice * 0.10); // 10% admin margin
+      const marginPct = commissionSettings?.oldItemAdminMarginPercent ?? 10;
+      const adminMarginAmount = Math.round(numSellerPrice * (marginPct / 100)); // dynamic admin margin
       const finalCustomerPrice = numSellerPrice + adminMarginAmount; // Total price shown to customers
 
       const newItemData: Omit<OldItem, 'id'> = {
@@ -880,56 +883,61 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
               </div>
             </div>
 
-            {/* Live 10% Admin Margin Auto-Calculation Card */}
-            {Number(price) > 0 && (
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50/70 border-2 border-amber-300/80 rounded-2xl p-4 shadow-sm space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2 font-black text-amber-950 text-xs sm:text-sm">
-                    <span className="w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-black">₹</span>
-                    <span>10% एडमिन मार्जिन ऑटोमैटिक जोड़ा गया (Price Breakdown)</span>
-                  </div>
-                  <span className="text-[11px] font-black bg-amber-600 text-white px-2.5 py-0.5 rounded-full shadow-xs">
-                    +10% Admin Margin
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                  {/* Step 1 */}
-                  <div className="bg-white p-3 rounded-xl border border-stone-200 shadow-xs">
-                    <div className="text-[10px] font-bold text-stone-500 uppercase tracking-tight">1. आपकी शुद्ध राशि (Seller Payout)</div>
-                    <div className="text-base font-black text-emerald-700 mt-1">
-                      ₹{Number(price).toLocaleString('en-IN')}
+            {/* Live Admin Margin Auto-Calculation Card */}
+            {Number(price) > 0 && (() => {
+              const marginPct = commissionSettings?.oldItemAdminMarginPercent ?? 10;
+              const marginAmt = Math.round(Number(price) * (marginPct / 100));
+              const totalDisplayPrice = Number(price) + marginAmt;
+              return (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50/70 border-2 border-amber-300/80 rounded-2xl p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2 font-black text-amber-950 text-xs sm:text-sm">
+                      <span className="w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-black">₹</span>
+                      <span>{marginPct}% एडमिन मार्जिन ऑटोमैटिक जोड़ा गया (Price Breakdown)</span>
                     </div>
-                    <div className="text-[10px] text-stone-500 mt-0.5 font-medium">बिकने पर आपको मिलेगी</div>
+                    <span className="text-[11px] font-black bg-amber-600 text-white px-2.5 py-0.5 rounded-full shadow-xs">
+                      +{marginPct}% Admin Margin
+                    </span>
                   </div>
 
-                  {/* Step 2 */}
-                  <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-xs">
-                    <div className="text-[10px] font-bold text-amber-800 uppercase tracking-tight">2. +10% एडमिन मार्जिन (Platform Fee)</div>
-                    <div className="text-base font-black text-amber-700 mt-1">
-                      +₹{Math.round(Number(price) * 0.10).toLocaleString('en-IN')}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    {/* Step 1 */}
+                    <div className="bg-white p-3 rounded-xl border border-stone-200 shadow-xs">
+                      <div className="text-[10px] font-bold text-stone-500 uppercase tracking-tight">1. आपकी शुद्ध राशि (Seller Payout)</div>
+                      <div className="text-base font-black text-emerald-700 mt-1">
+                        ₹{Number(price).toLocaleString('en-IN')}
+                      </div>
+                      <div className="text-[10px] text-stone-500 mt-0.5 font-medium">बिकने पर आपको मिलेगी</div>
                     </div>
-                    <div className="text-[10px] text-amber-800/80 mt-0.5 font-medium">स्मार्ट डिलीवरी कमीशन (10%)</div>
+
+                    {/* Step 2 */}
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-xs">
+                      <div className="text-[10px] font-bold text-amber-800 uppercase tracking-tight">2. +{marginPct}% एडमिन मार्जिन (Platform Fee)</div>
+                      <div className="text-base font-black text-amber-700 mt-1">
+                        +₹{marginAmt.toLocaleString('en-IN')}
+                      </div>
+                      <div className="text-[10px] text-amber-800/80 mt-0.5 font-medium">स्मार्ट डिलीवरी कमीशन ({marginPct}%)</div>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="bg-amber-600 text-white p-3 rounded-xl shadow-sm">
+                      <div className="text-[10px] font-bold text-amber-100 uppercase tracking-tight">3. = ग्राहकों को दिखने वाली कुल कीमत</div>
+                      <div className="text-lg font-black text-white mt-1">
+                        ₹{totalDisplayPrice.toLocaleString('en-IN')}
+                      </div>
+                      <div className="text-[10px] text-amber-100 mt-0.5 font-medium">पोर्टल पर यह कीमत दिखेगी</div>
+                    </div>
                   </div>
 
-                  {/* Step 3 */}
-                  <div className="bg-amber-600 text-white p-3 rounded-xl shadow-sm">
-                    <div className="text-[10px] font-bold text-amber-100 uppercase tracking-tight">3. = ग्राहकों को दिखने वाली कुल कीमत</div>
-                    <div className="text-lg font-black text-white mt-1">
-                      ₹{(Number(price) + Math.round(Number(price) * 0.10)).toLocaleString('en-IN')}
-                    </div>
-                    <div className="text-[10px] text-amber-100 mt-0.5 font-medium">पोर्टल पर यह कीमत दिखेगी</div>
+                  <div className="text-[11px] text-amber-900 bg-white/70 p-2.5 rounded-xl border border-amber-200 flex items-start gap-2">
+                    <span className="font-bold shrink-0">💡 ध्यान दें:</span>
+                    <span>
+                      आपको अपने सामान की पूरी मांगी गई राशि <strong>₹{Number(price).toLocaleString('en-IN')}</strong> मिलेगी। पोर्टल पर {marginPct}% एडमिन मार्जिन (+₹{marginAmt.toLocaleString('en-IN')}) जुड़कर ग्राहकों को कुल <strong>₹{totalDisplayPrice.toLocaleString('en-IN')}</strong> दिखाई देगा।
+                    </span>
                   </div>
                 </div>
-
-                <div className="text-[11px] text-amber-900 bg-white/70 p-2.5 rounded-xl border border-amber-200 flex items-start gap-2">
-                  <span className="font-bold shrink-0">💡 ध्यान दें:</span>
-                  <span>
-                    आपको अपने सामान की पूरी मांगी गई राशि <strong>₹{Number(price).toLocaleString('en-IN')}</strong> मिलेगी। पोर्टल पर 10% एडमिन मार्जिन (+₹{Math.round(Number(price) * 0.10).toLocaleString('en-IN')}) जुड़कर ग्राहकों को कुल <strong>₹{(Number(price) + Math.round(Number(price) * 0.10)).toLocaleString('en-IN')}</strong> दिखाई देगा।
-                  </span>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Photo Upload */}
             <div>
