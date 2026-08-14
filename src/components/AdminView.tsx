@@ -265,21 +265,39 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const u = adminUsername.trim().toLowerCase();
     const p = adminPassword.trim();
 
-    const validAdminUsernames = ['admin', 'user', '9457695918', 'mehtab', 'bazaar_admin', ''];
+    if (!u) {
+      setAdminAuthError('कृपया एडमिन यूज़रनेम दर्ज करें।');
+      return;
+    }
+    if (!p) {
+      setAdminAuthError('कृपया एडमिन पासवर्ड दर्ज करें।');
+      return;
+    }
+
+    const validAdminUsernames = ['admin', 'mehtab', 'mehtabclothhouse786@gmail.com', '9457695918', 'bazaar_admin'];
     const isUserValid = validAdminUsernames.includes(u);
-    const isPassValid = (p === savedAdminPassword || p === '12345' || p === '1234' || p === '123' || p === 'admin');
+    
+    // Strict password match: Only allow the exact saved password (or default '12345' if never changed)
+    const expectedPassword = savedAdminPassword || '12345';
+    const isPassValid = (p === expectedPassword);
 
-    if (isUserValid && isPassValid) {
-      setIsAdminLoggedIn(true);
-      setAdminAuthError('');
+    if (!isUserValid) {
+      setAdminAuthError('❌ अमान्य एडमिन यूज़रनेम! केवल अधिकृत एडमिन क्रेडेंशियल ही स्वीकार्य हैं।');
+      return;
+    }
 
-      // If using default password 12345, 1234, 123 or admin, prompt for first-time change
-      if (p === '12345' || p === '1234' || p === '123' || p === 'admin' || savedAdminPassword === '12345') {
-        setIsFirstTimeChangePass(true);
-        setIsChangePassModalOpen(true);
-      }
-    } else {
-      setAdminAuthError('गलत एडमिन यूज़रनेम या पासवर्ड! (Default Password: 12345)');
+    if (!isPassValid) {
+      setAdminAuthError('❌ गलत पासवर्ड! कृपया अपना सही पासवर्ड दर्ज करें या नीचे "पासवर्ड भूल गए?" विकल्प का उपयोग करें।');
+      return;
+    }
+
+    setIsAdminLoggedIn(true);
+    setAdminAuthError('');
+
+    // If using default initial password 12345, prompt for first-time password setup
+    if (p === '12345' && savedAdminPassword === '12345') {
+      setIsFirstTimeChangePass(true);
+      setIsChangePassModalOpen(true);
     }
   };
 

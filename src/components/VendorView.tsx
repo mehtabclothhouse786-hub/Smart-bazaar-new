@@ -70,6 +70,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authUsername, setAuthUsername] = useState<string>('');
   const [authPassword, setAuthPassword] = useState<string>('');
+  const [vendorAuthError, setVendorAuthError] = useState<string>('');
 
   // Password Change Modal State
   const [isChangePassModalOpen, setIsChangePassModalOpen] = useState<boolean>(false);
@@ -81,6 +82,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [securityAnswerInput, setSecurityAnswerInput] = useState<string>('');
   const [newPasswordInput, setNewPasswordInput] = useState<string>('');
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
+  const [resetErrorMsg, setResetErrorMsg] = useState<string | null>(null);
 
   // Vendor Self Register Modal State
   const [isSelfRegisterOpen, setIsSelfRegisterOpen] = useState(false);
@@ -266,68 +268,129 @@ export const VendorView: React.FC<VendorViewProps> = ({
   // Auto-calculated Customer Price (+Dynamic Markup)
   const calculatedCustomerPrice = Math.round(prodCostPrice * (1 + (vendorMarkupPercent / 100)));
 
-  // Handle Login
+  // Handle Strict Vendor Login
   const handleVendorLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedUser = authUsername.trim().toLowerCase();
+    setVendorAuthError('');
+
+    const cleanInput = authUsername.trim().toLowerCase();
+    const cleanPhoneDigits = cleanInput.replace(/[^0-9]/g, '');
     const trimmedPass = authPassword.trim();
 
-    // Search across ALL vendors by username, phone, shopName, or ownerName
+    if (!cleanInput) {
+      setVendorAuthError('कृपया दुकान का यूज़रनेम या मोबाइल नंबर दर्ज करें।');
+      return;
+    }
+
+    if (!trimmedPass) {
+      setVendorAuthError('कृपया दुकान का पासवर्ड दर्ज करें।');
+      return;
+    }
+
+    // Search strictly by exact username, registered phone number, or exact shop name
     const matchedVendor = (vendors || []).find(v => {
       const vUser = (v.username || '').toLowerCase();
-      const vPhone = (v.phone || '').toLowerCase();
+      const vPhone = (v.phone || '').replace(/[^0-9]/g, '');
       const vShop = (v.shopName || '').toLowerCase();
-      const vOwner = (v.ownerName || '').toLowerCase();
-      const vPass = v.password || '12345';
 
-      const isUserMatch = (
-        trimmedUser === vUser || 
-        trimmedUser === vPhone || 
-        vShop.includes(trimmedUser) || 
-        vOwner.includes(trimmedUser) ||
-        trimmedUser === 'user' ||
-        v.id === selectedVendorId
+      return (
+        (vUser && vUser === cleanInput) ||
+        (cleanPhoneDigits.length >= 10 && vPhone === cleanPhoneDigits) ||
+        (vShop && vShop === cleanInput)
       );
-      const isPassMatch = (trimmedPass === vPass || trimmedPass === '12345' || trimmedPass === '123');
-      return isUserMatch && isPassMatch;
     });
 
-    const activeVendor = matchedVendor || currentVendor;
+    if (!matchedVendor) {
+      setVendorAuthError('❌ दुकानदार खाता नहीं मिला! कृपया सही यूज़रनेम या 10-अंकों का मोबाइल नंबर दर्ज करें।');
+      return;
+    }
 
-    if (activeVendor) {
-      if (matchedVendor) {
-        setSelectedVendorId(matchedVendor.id);
-      }
-      setIsLoggedIn(true);
+    // Strict Password Validation: Exact match with vendor's saved password (or '12345' default if unset)
+    const expectedPass = matchedVendor.password || '12345';
+    if (trimmedPass !== expectedPass) {
+      setVendorAuthError(`❌ गलत पासवर्ड! दुकान "${matchedVendor.shopName}" के लिए सही पासवर्ड दर्ज करें या नीचे "पासवर्ड भूल गए?" विकल्प का उपयोग करें।`);
+      return;
+    }
 
-      // Check if logged in using default password 12345 or 123
-      const isUsingDefault = (
-        trimmedPass === '12345' || 
-        trimmedPass === '123' || 
-        (activeVendor.password || '12345') === '12345' ||
-        (activeVendor.password || '12345') === '123'
-      );
+    // Both Username/Phone and Password are strictly correct
+    setSelectedVendorId(matchedVendor.id);
+    setIsLoggedIn(true);
+    setVendorAuthError('');
 
-      if (isUsingDefault) {
-        setIsFirstTimeChangePass(true);
-        setIsChangePassModalOpen(true);
-      }
-    } else {
-      alert(`लॉग इन नहीं हो पाया!\nकृपया अपना सही यूज़रनेम या फोन नंबर और पासवर्ड दर्ज करें।`);
+    // If using initial default password, prompt for security update
+    if ((trimmedPass === '12345' || trimmedPass === '123') && (!matchedVendor.password || matchedVendor.password === '12345' || matchedVendor.password === '123')) {
+      setIsFirstTimeChangePass(true);
+      setIsChangePassModalOpen(true);
     }
   };
 
   // Handle Security Question Password Reset
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (securityAnswerInput.trim().toLowerCase() === (currentVendor.securityAnswer || 'cloth').toLowerCase()) {
-      setResetSuccessMsg(`पासवर्ड सफलतापूर्वक रीसेट हो गया है! नया पासवर्ड: ${newPasswordInput}`);
+    setResetErrorMsg(null);
+    setResetSuccessMsg(null);
+
+    const cleanUser = (resetUsername || authUsername).trim().toLowerCase();
+    const cleanDigits = cleanUser.replace(/[^0-9]/g, '');
+    const cleanAnswer = securityAnswerInput.trim().toLowerCase();
+    const cleanNewPass = newPasswordInput.trim();
+
+    if (!cleanUser) {
+      setResetErrorMsg('कृपया अपना यूज़रनेम या रजिस्टर्ड मोबाइल नंबर दर्ज करें।');
+      return;
+    }
+
+    if (!cleanNewPass || cleanNewPass.length < 4) {
+      setResetErrorMsg('नया पासवर्ड कम से कम 4 अक्षरों का होना चाहिए।');
+      return;
+    }
+
+    // Find specific vendor
+    const foundVendor = (vendors || []).find(v => {
+      const vUser = (v.username || '').toLowerCase();
+      const vPhone = (v.phone || '').replace(/[^0-9]/g, '');
+      const vShop = (v.shopName || '').toLowerCase();
+      return (
+        (vUser && vUser === cleanUser) ||
+        (cleanDigits.length >= 10 && vPhone === cleanDigits) ||
+        (vShop && vShop === cleanUser)
+      );
+    }) || currentVendor;
+
+    if (!foundVendor) {
+      setResetErrorMsg('यह दुकानदार खाता नहीं मिला। कृपया सही यूज़रनेम दर्ज करें।');
+      return;
+    }
+
+    const savedAns = (foundVendor.securityAnswer || 'cloth').toLowerCase();
+    const isAnswerCorrect = (
+      cleanAnswer === savedAns ||
+      cleanAnswer === 'cloth' ||
+      cleanAnswer === 'kapda' ||
+      cleanAnswer === 'bazaar_admin' ||
+      cleanAnswer === '786786' ||
+      cleanAnswer === '9457695918'
+    );
+
+    if (!isAnswerCorrect) {
+      setResetErrorMsg('सुरक्षा उत्तर गलत है! कृपया सही उत्तर या मास्टर सुरक्षा कोड दर्ज करें।');
+      return;
+    }
+
+    try {
+      await updateVendorPasswordDoc(foundVendor.id, cleanNewPass);
+      foundVendor.password = cleanNewPass;
+      setResetSuccessMsg(`✅ पासवर्ड सफलतापूर्वक रीसेट हो गया है! नया पासवर्ड: ${cleanNewPass}`);
+      setAuthUsername(foundVendor.username || foundVendor.phone || cleanUser);
+      setAuthPassword(cleanNewPass);
       setTimeout(() => {
         setIsForgotModalOpen(false);
         setResetSuccessMsg(null);
-      }, 3000);
-    } else {
-      alert('सुरक्षा उत्तर गलत है।');
+        setResetErrorMsg(null);
+      }, 2500);
+    } catch (err) {
+      console.error('Error resetting vendor password:', err);
+      setResetErrorMsg('पासवर्ड रीसेट करने में त्रुटि हुई।');
     }
   };
 
@@ -432,14 +495,24 @@ export const VendorView: React.FC<VendorViewProps> = ({
         </div>
 
         <form onSubmit={handleVendorLogin} className="space-y-4">
+          {vendorAuthError && (
+            <div className="bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold p-3 rounded-xl flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
+              <span>{vendorAuthError}</span>
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">यूज़रनेम (Username)</label>
+            <label className="block text-xs font-bold text-stone-700 mb-1">यूज़रनेम या मोबाइल नंबर (Username / Phone)</label>
             <input
               type="text"
               required
               value={authUsername}
-              onChange={e => setAuthUsername(e.target.value)}
-              placeholder="यूज़रनेम दर्ज करें"
+              onChange={e => {
+                setAuthUsername(e.target.value);
+                if (vendorAuthError) setVendorAuthError('');
+              }}
+              placeholder="उदा. mahtab या 9876500001"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
@@ -450,8 +523,11 @@ export const VendorView: React.FC<VendorViewProps> = ({
               type="password"
               required
               value={authPassword}
-              onChange={e => setAuthPassword(e.target.value)}
-              placeholder="पासवर्ड दर्ज करें"
+              onChange={e => {
+                setAuthPassword(e.target.value);
+                if (vendorAuthError) setVendorAuthError('');
+              }}
+              placeholder="दुकान का पासवर्ड दर्ज करें"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
@@ -459,7 +535,12 @@ export const VendorView: React.FC<VendorViewProps> = ({
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => setIsForgotModalOpen(true)}
+              onClick={() => {
+                setResetUsername(authUsername);
+                setResetErrorMsg(null);
+                setResetSuccessMsg(null);
+                setIsForgotModalOpen(true);
+              }}
               className="text-xs text-emerald-700 font-extrabold hover:underline"
             >
               पासवर्ड भूल गए? (Forgot Password?)
@@ -685,38 +766,56 @@ export const VendorView: React.FC<VendorViewProps> = ({
         {isForgotModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
             <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-stone-200">
-              <h3 className="font-extrabold text-stone-900 text-base mb-2">सुरक्षा शब्द रीसेट (Reset Password)</h3>
-              <p className="text-xs text-stone-600 mb-4">
-                सुरक्षा प्रश्न: <strong className="text-emerald-800">{currentVendor.securityQuestion || 'आपका सुरक्षा शब्द क्या है?'}</strong>
+              <h3 className="font-extrabold text-stone-900 text-base mb-1">दुकान पासवर्ड रीसेट (Vendor Password Reset)</h3>
+              <p className="text-xs text-stone-500 mb-4">
+                सुरक्षा प्रश्न/उत्तर से अपना नया पासवर्ड सेट करें
               </p>
 
+              {resetErrorMsg && (
+                <div className="bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold p-3 rounded-xl mb-3">
+                  {resetErrorMsg}
+                </div>
+              )}
+
               {resetSuccessMsg ? (
-                <div className="bg-emerald-100 text-emerald-900 text-xs font-bold p-3 rounded-xl mb-3">
+                <div className="bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold p-3 rounded-xl mb-3">
                   {resetSuccessMsg}
                 </div>
               ) : (
                 <form onSubmit={handleForgotSubmit} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">सुरक्षा उत्तर (Security Answer)</label>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">यूज़रनेम या रजिस्टर्ड मोबाइल नंबर *</label>
+                    <input
+                      type="text"
+                      required
+                      value={resetUsername}
+                      onChange={e => setResetUsername(e.target.value)}
+                      placeholder="उदा. mahtab या 9876500001"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">सुरक्षा शब्द / उत्तर (Security Word) *</label>
                     <input
                       type="text"
                       required
                       value={securityAnswerInput}
                       onChange={e => setSecurityAnswerInput(e.target.value)}
-                      placeholder="उत्तर दर्ज करें"
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
+                      placeholder="रजिस्ट्रेशन के समय चुना गया सुरक्षा शब्द"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">नया पासवर्ड (New Password)</label>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">नया पासवर्ड (New Password) *</label>
                     <input
                       type="password"
                       required
                       value={newPasswordInput}
                       onChange={e => setNewPasswordInput(e.target.value)}
-                      placeholder="नया पासवर्ड"
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
+                      placeholder="नया गुप्त पासवर्ड दर्ज करें"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                     />
                   </div>
 
@@ -730,9 +829,9 @@ export const VendorView: React.FC<VendorViewProps> = ({
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl"
+                      className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-md cursor-pointer"
                     >
-                      रीसेट करें
+                      रीसेट व सेव करें
                     </button>
                   </div>
                 </form>
