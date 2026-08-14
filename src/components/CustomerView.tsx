@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product, CartItem, Order, Vendor, ServiceProvider, ServiceBooking, CustomerUser } from '../types';
+import { Product, CartItem, Order, Vendor, ServiceProvider, ServiceBooking, CustomerUser, OldItem } from '../types';
 import { 
   Plus, 
   Minus, 
@@ -23,11 +23,13 @@ import {
   Wrench,
   LogIn,
   Search,
-  UserCheck
+  UserCheck,
+  Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SMART_DELIVERY_UPI } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
+import { OldItemsPanel } from './OldItemsPanel';
 
 interface CustomerViewProps {
   products: Product[];
@@ -51,13 +53,17 @@ interface CustomerViewProps {
     notes?: string;
   }) => Promise<string>;
   searchQuery: string;
-  activeTab: 'shop' | 'services' | 'orders';
-  onTabChange: (tab: 'shop' | 'services' | 'orders') => void;
+  activeTab: 'shop' | 'services' | 'old_items' | 'orders';
+  onTabChange: (tab: 'shop' | 'services' | 'old_items' | 'orders') => void;
   services?: ServiceProvider[];
   serviceBookings?: ServiceBooking[];
   onAddService?: (service: Omit<ServiceProvider, 'id'>) => Promise<string>;
   onDeleteService?: (serviceId: string) => Promise<void>;
   onCreateBooking?: (booking: Omit<ServiceBooking, 'id'>) => Promise<string>;
+  oldItems?: OldItem[];
+  onAddOldItem?: (item: Omit<OldItem, 'id'>) => Promise<string>;
+  onUpdateOldItem?: (id: string, updates: Partial<OldItem>) => Promise<void>;
+  onDeleteOldItem?: (id: string) => Promise<void>;
   isCartOpen?: boolean;
   onCloseCart?: () => void;
   onOpenCart?: () => void;
@@ -83,6 +89,10 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   onAddService = async () => '',
   onDeleteService = async () => {},
   onCreateBooking = async () => '',
+  oldItems = [],
+  onAddOldItem = async () => '',
+  onUpdateOldItem = async () => {},
+  onDeleteOldItem = async () => {},
   isCartOpen = false,
   onCloseCart,
   onOpenCart,
@@ -232,38 +242,69 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   return (
     <div className="pb-16">
       
-      {/* Customer Header Navigation Tabs */}
-      <div className="flex items-center justify-between gap-2 border-b border-stone-200 mb-6 pb-2">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+      {/* Customer Header Navigation Tabs - Unified 3-in-1 Full Width Bar */}
+      <div className="mb-6">
+        <div className="w-full grid grid-cols-3 bg-stone-100 p-1 sm:p-1.5 rounded-2xl sm:rounded-3xl border border-stone-200/90 shadow-inner gap-1 sm:gap-1.5">
+          
+          {/* Tab 1: Shops */}
           <button
             onClick={() => onTabChange('shop')}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl text-center transition-all flex items-center justify-center gap-1 sm:gap-2 cursor-pointer ${
               activeTab === 'shop'
-                ? 'bg-emerald-700 text-white shadow-md'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                ? 'bg-emerald-700 text-white shadow-md font-black scale-[1.02]'
+                : 'bg-white/80 hover:bg-white text-stone-700 font-bold hover:shadow-xs'
             }`}
           >
-            <ShoppingBag className="w-4 h-4" />
-            <span>शॉप (Browse Shops)</span>
+            <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="text-[11px] sm:text-xs md:text-sm tracking-tight whitespace-nowrap">
+              दुकान <span className="hidden xs:inline">(Shop)</span>
+            </span>
           </button>
 
+          {/* Tab 2: Services */}
           <button
             onClick={() => onTabChange('services')}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl text-center transition-all flex items-center justify-center gap-1 sm:gap-2 cursor-pointer ${
               activeTab === 'services'
-                ? 'bg-emerald-700 text-white shadow-md'
-                : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                ? 'bg-blue-700 text-white shadow-md font-black scale-[1.02]'
+                : 'bg-white/80 hover:bg-white text-stone-700 font-bold hover:shadow-xs'
             }`}
           >
-            <Wrench className="w-4 h-4" />
-            <span>🛠️ सेवाएं (Services)</span>
+            <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="text-[11px] sm:text-xs md:text-sm tracking-tight whitespace-nowrap">
+              सेवाएं <span className="hidden xs:inline">(Services)</span>
+            </span>
           </button>
+
+          {/* Tab 3: Old Items */}
+          <button
+            onClick={() => onTabChange('old_items')}
+            className={`py-2 sm:py-2.5 px-1 sm:px-3 rounded-xl sm:rounded-2xl text-center transition-all flex items-center justify-center gap-1 sm:gap-2 cursor-pointer ${
+              activeTab === 'old_items'
+                ? 'bg-amber-600 text-white shadow-md font-black scale-[1.02]'
+                : 'bg-white/80 hover:bg-white text-stone-700 font-bold hover:shadow-xs'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="text-[11px] sm:text-xs md:text-sm tracking-tight whitespace-nowrap">
+              पुराने सामान <span className="hidden xs:inline">(Old)</span>
+            </span>
+          </button>
+
         </div>
-
-
       </div>
 
-      {activeTab === 'services' ? (
+      {activeTab === 'old_items' ? (
+        <OldItemsPanel
+          oldItems={oldItems}
+          onAddOldItem={onAddOldItem}
+          onUpdateOldItem={onUpdateOldItem}
+          onDeleteOldItem={onDeleteOldItem}
+          customerUser={customerUser}
+          onRequireLogin={onRequireLogin}
+          isAdmin={false}
+        />
+      ) : activeTab === 'services' ? (
         <ServicesPanel
           services={services}
           serviceBookings={serviceBookings}

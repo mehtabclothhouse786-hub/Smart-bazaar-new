@@ -78,11 +78,12 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const roles: { id: UserRole; label: string }[] = [
-    { id: 'customer', label: 'ग्राहक' },
-    { id: 'vendor', label: 'दुकानदार' },
-    { id: 'delivery', label: 'डिलीवरी' },
-    { id: 'service', label: 'सर्विस प्रदाता' },
-    { id: 'admin', label: 'एडमिन' }
+    { id: 'customer', label: 'ग्राहक (Customer Store)' },
+    { id: 'old_items', label: '📦 पुराने सामान (Old Items / Second Hand)' },
+    { id: 'service', label: '🛠️ स्थानीय सेवाएं (Services)' },
+    { id: 'vendor', label: 'दुकानदार (Vendor Portal)' },
+    { id: 'delivery', label: 'डिलीवरी पार्टनर (Delivery)' },
+    { id: 'admin', label: 'एडमिन पैनल (Admin Dashboard)' }
   ];
 
   return (

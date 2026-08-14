@@ -102,6 +102,28 @@
         "createdAt": { "type": "number" }
       },
       "required": ["serviceId", "providerPhone", "customerPhone"]
+    },
+    "oldItems": {
+      "title": "Old Items",
+      "description": "Second hand / used items buy and sell marketplace listings",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "itemAge": { "type": "string" },
+        "condition": { "type": "string" },
+        "description": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "sellerPhone": { "type": "string" },
+        "whatsappPhone": { "type": "string" },
+        "location": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["title", "category", "price", "condition", "sellerName", "sellerPhone", "location"]
     }
   }
 }

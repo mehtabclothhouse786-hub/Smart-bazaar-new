@@ -11,7 +11,7 @@ import {
   query,
   where 
 } from '../firebase';
-import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser } from '../types';
+import { Product, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser, OldItem } from '../types';
 
 const PRODUCTS_COL = 'products';
 const ORDERS_COL = 'orders';
@@ -20,6 +20,7 @@ const DELIVERY_COL = 'deliveryPartners';
 const SERVICES_COL = 'serviceProviders';
 const SERVICE_BOOKINGS_COL = 'serviceBookings';
 const CUSTOMERS_COL = 'customers';
+const OLD_ITEMS_COL = 'oldItems';
 const ADMIN_COL = 'adminSettings';
 
 // Pricing and commission rates
@@ -122,6 +123,104 @@ export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [
     rating: 4.9,
     securityQuestion: SECURITY_QUESTION,
     securityAnswer: 'chandpur'
+  }
+];
+
+export const SAMPLE_OLD_ITEMS: OldItem[] = [
+  {
+    id: 'old_1',
+    title: 'Hero Splendor Plus (2022 Model)',
+    category: 'वाहन / बाइक',
+    sellerPrice: 36000,
+    adminMargin: 3600,
+    price: 39600,
+    originalPrice: 74000,
+    itemAge: '1.5 वर्ष',
+    condition: 'Like New',
+    description: 'सिंगल ओनर, फर्स्ट क्लास माइलेज व कंडीशन, दोनों नए ट्यूबलेस टायर, सभी दस्तावेज व इंश्योरेंस मौजूद।',
+    sellerName: 'अमित चौहान',
+    sellerPhone: '9876543210',
+    whatsappPhone: '9876543210',
+    location: 'बिजनौर (Bijnor)',
+    imageUrl: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=500&auto=format&fit=crop&q=80',
+    status: 'available',
+    createdAt: Date.now() - 86400000 * 2
+  },
+  {
+    id: 'old_2',
+    title: 'Samsung 32 Inch HD Smart LED TV',
+    category: 'मोबाइल एवं इलेक्ट्रॉनिक्स',
+    sellerPrice: 7000,
+    adminMargin: 700,
+    price: 7700,
+    originalPrice: 15490,
+    itemAge: '1 वर्ष',
+    condition: 'Like New',
+    description: 'यूट्यूब, नेटफ्लिक्स व वाईफाई सपोर्ट, शानदार डिस्प्ले व साउंड, ओरिजिनल रिमोट व वॉल स्टैंड साथ।',
+    sellerName: 'मोहम्मद इमरान',
+    sellerPhone: '9457695918',
+    whatsappPhone: '9457695918',
+    location: 'चांदपुर (Chandpur)',
+    imageUrl: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=500&auto=format&fit=crop&q=80',
+    status: 'available',
+    createdAt: Date.now() - 86400000 * 4
+  },
+  {
+    id: 'old_3',
+    title: '5 सीटर सागवान/शीशम सोफा सेट (3+1+1)',
+    category: 'फर्नीचर',
+    sellerPrice: 10000,
+    adminMargin: 1000,
+    price: 11000,
+    originalPrice: 25000,
+    itemAge: '2 वर्ष',
+    condition: 'Good',
+    description: 'प्योर शीशम मजबूत लकड़ी की फ्रेम, कुशन बिल्कुल टाइट व आरामदायक, वॉशेबल कवर सहित।',
+    sellerName: 'वर्मा जी',
+    sellerPhone: '9876500001',
+    whatsappPhone: '9876500001',
+    location: 'नजीबाबाद (Najibabad)',
+    imageUrl: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80',
+    status: 'available',
+    createdAt: Date.now() - 86400000 * 5
+  },
+  {
+    id: 'old_4',
+    title: 'Symphony 70 Litre Desert Air Cooler',
+    category: 'घरेलू उपकरण',
+    sellerPrice: 3200,
+    adminMargin: 320,
+    price: 3520,
+    originalPrice: 8990,
+    itemAge: '1 सीजन',
+    condition: 'Good',
+    description: 'बड़ा डेजर्ट कूलर, पावरफुल कॉपर मोटर, हनीकॉम्ब कूलिंग पैड, ऑटो स्विंग, जबरदस्त ठंडी हवा।',
+    sellerName: 'सुनील कुमार',
+    sellerPhone: '9876543212',
+    whatsappPhone: '9876543212',
+    location: 'चांदपुर (Chandpur)',
+    imageUrl: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=500&auto=format&fit=crop&q=80',
+    status: 'available',
+    createdAt: Date.now() - 86400000 * 7
+  },
+  {
+    id: 'old_5',
+    title: 'सॉलिड स्टडी टेबल + ऑफिस रिवॉल्विंग चेयर',
+    category: 'फर्नीचर',
+    sellerPrice: 2500,
+    adminMargin: 250,
+    price: 2750,
+    originalPrice: 6200,
+    itemAge: '6 माह',
+    condition: 'Like New',
+    description: 'स्टूडेंट स्टडी अथवा लैपटॉप वर्क के लिए दराज वाली टेबल व बैक सपोर्ट वाली घूमने वाली कुर्सी।',
+    sellerName: 'सुहेल सिद्दीकी',
+    sellerPhone: '9876543214',
+    whatsappPhone: '9876543214',
+    location: 'बिजनौर (Bijnor)',
+    imageUrl: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=500&auto=format&fit=crop&q=80',
+    status: 'available',
+    createdAt: Date.now() - 86400000 * 1
   }
 ];
 
@@ -835,6 +934,109 @@ export async function getCustomerAccountByPhoneDoc(phone: string): Promise<Custo
   // Fallback to local storage
   const allCustomers = getLocalData<Record<string, CustomerUser>>('customers_map', {});
   return allCustomers[cleanPhone] || null;
+}
+
+// --- OLD ITEMS (USED GOODS / SECOND HAND BAZAAR) ---
+
+export function subscribeOldItems(onUpdate: (items: OldItem[]) => void) {
+  try {
+    const colRef = collection(db, OLD_ITEMS_COL);
+    return onSnapshot(colRef, (snapshot) => {
+      if (snapshot.empty) {
+        const hasSeeded = localStorage.getItem('smart_bazaar_has_seeded_old_items');
+        if (!hasSeeded) {
+          seedOldItems();
+        } else {
+          setLocalData(OLD_ITEMS_COL, []);
+          onUpdate([]);
+        }
+      } else {
+        localStorage.setItem('smart_bazaar_has_seeded_old_items', 'true');
+        const list: OldItem[] = snapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        } as OldItem));
+        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setLocalData(OLD_ITEMS_COL, list);
+        onUpdate(list);
+      }
+    }, (err) => {
+      console.warn('Firestore oldItems subscribe error, using fallback:', err);
+      onUpdate(getLocalData(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS));
+    });
+  } catch (e) {
+    onUpdate(getLocalData(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS));
+    return () => {};
+  }
+}
+
+export async function seedOldItems() {
+  try {
+    for (const item of SAMPLE_OLD_ITEMS) {
+      await setDoc(doc(db, OLD_ITEMS_COL, item.id), item);
+    }
+    localStorage.setItem('smart_bazaar_has_seeded_old_items', 'true');
+  } catch (e) {
+    console.error('Error seeding old items:', e);
+  }
+}
+
+export async function addOldItemDoc(item: Omit<OldItem, 'id'>): Promise<string> {
+  const newId = 'old_' + Date.now();
+  const obj: OldItem = {
+    ...item,
+    id: newId,
+    status: item.status || 'available',
+    createdAt: Date.now()
+  };
+  const cleanObj = sanitizeForFirestore(obj);
+
+  try {
+    await setDoc(doc(db, OLD_ITEMS_COL, newId), cleanObj);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    current.unshift(obj);
+    setLocalData(OLD_ITEMS_COL, current);
+    return newId;
+  } catch (e) {
+    console.error('Error adding old item doc:', e);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    current.unshift(obj);
+    setLocalData(OLD_ITEMS_COL, current);
+    return newId;
+  }
+}
+
+export async function updateOldItemDoc(id: string, updates: Partial<OldItem>): Promise<void> {
+  const cleanUpdates = sanitizeForFirestore(updates);
+  try {
+    await updateDoc(doc(db, OLD_ITEMS_COL, id), cleanUpdates);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const idx = current.findIndex(it => it.id === id);
+    if (idx !== -1) {
+      current[idx] = { ...current[idx], ...updates };
+      setLocalData(OLD_ITEMS_COL, current);
+    }
+  } catch (e) {
+    console.error('Error updating old item doc:', e);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const idx = current.findIndex(it => it.id === id);
+    if (idx !== -1) {
+      current[idx] = { ...current[idx], ...updates };
+      setLocalData(OLD_ITEMS_COL, current);
+    }
+  }
+}
+
+export async function deleteOldItemDoc(id: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, OLD_ITEMS_COL, id));
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    setLocalData(OLD_ITEMS_COL, current.filter(it => it.id !== id));
+  } catch (e) {
+    console.error('Error deleting old item doc:', e);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    setLocalData(OLD_ITEMS_COL, current.filter(it => it.id !== id));
+  }
 }
 
 

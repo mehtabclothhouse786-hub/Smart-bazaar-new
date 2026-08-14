@@ -1,4 +1,4 @@
-export type UserRole = 'customer' | 'vendor' | 'delivery' | 'service' | 'admin';
+export type UserRole = 'customer' | 'vendor' | 'delivery' | 'service' | 'old_items' | 'admin';
 
 export interface CustomerUser {
   id: string;
@@ -149,5 +149,26 @@ export interface ServiceBooking {
   platformFee?: number; // 10% platform charge
   finalBillAmount?: number; // Total customer bill
   billGeneratedAt?: number;
+}
+
+export interface OldItem {
+  id: string;
+  title: string; // सामान का नाम (उदा. Hero Splendor, 32 inch Smart TV, 5 Seater Sofa)
+  category: string; // मोबाइल एवं इलेक्ट्रॉनिक्स | वाहन / बाइक | फर्नीचर | घरेलू उपकरण | कपड़े एवं परिधान | किताबें | अन्य
+  price: number; // ग्राहकों के लिए कुल अंतिम बिक्री मूल्य (₹) (विक्रेता मूल्य + 10% एडमिन मार्जिन)
+  sellerPrice?: number; // विक्रेता द्वारा मांगी गई मूल राशि (₹)
+  adminMargin?: number; // 10% एडमिन मार्जिन (₹)
+  originalPrice?: number; // नई कीमत / MRP (₹)
+  itemAge?: string; // कितना पुराना है (उदा. 6 माह, 1 साल, 2 वर्ष)
+  condition: 'Like New' | 'Good' | 'Fair'; // 'लगभग नया' | 'अच्छी स्थिति' | 'सामान्य'
+  description: string; // सामान का विवरण व खासियत
+  sellerName: string; // विक्रेता का नाम
+  sellerPhone: string; // संपर्क मोबाइल नंबर (कॉल व WhatsApp)
+  whatsappPhone?: string; // WhatsApp नंबर (optional)
+  location: string; // स्थान / गांव / शहर (उदा. बिजनौर, नजीबाबाद)
+  imageUrl?: string; // सामान की फोटो
+  status: 'available' | 'sold'; // 'available' = उपलब्ध, 'sold' = बिक गया
+  createdAt: number;
+  sellerUserId?: string;
 }
 

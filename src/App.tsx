@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserRole, Product, CartItem, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser } from './types';
+import { UserRole, Product, CartItem, Order, Vendor, DeliveryPartner, OrderStatus, ServiceProvider, ServiceBooking, CustomerUser, OldItem } from './types';
 import { 
   subscribeProducts, 
   subscribeOrders, 
@@ -7,6 +7,7 @@ import {
   subscribeDeliveryPartners,
   subscribeServices,
   subscribeServiceBookings,
+  subscribeOldItems,
   addProductDoc,
   updateProductDoc,
   deleteProductDoc,
@@ -20,10 +21,14 @@ import {
   addServiceProviderDoc,
   deleteServiceProviderDoc,
   createServiceBookingDoc,
+  addOldItemDoc,
+  updateOldItemDoc,
+  deleteOldItemDoc,
   seedProducts,
   seedVendors,
   seedDeliveryPartners,
   seedServices,
+  seedOldItems,
   saveCustomerAccountDoc
 } from './services/db';
 import { playOrderSound, sendBrowserNotification, requestNotificationPermission } from './services/notification';
@@ -33,6 +38,7 @@ import { VendorView } from './components/VendorView';
 import { DeliveryView } from './components/DeliveryView';
 import { AdminView } from './components/AdminView';
 import { ServicesPanel } from './components/ServicesPanel';
+import { OldItemsPanel } from './components/OldItemsPanel';
 import { CustomerAuthModal } from './components/CustomerAuthModal';
 import { CustomerPanelModal } from './components/CustomerPanelModal';
 import { MadeInIndiaFooter } from './components/MadeInIndiaFooter';
@@ -46,6 +52,7 @@ export default function App() {
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
   const [services, setServices] = useState<ServiceProvider[]>([]);
   const [serviceBookings, setServiceBookings] = useState<ServiceBooking[]>([]);
+  const [oldItems, setOldItems] = useState<OldItem[]>([]);
 
   // Customer authentication state
   const [customerUser, setCustomerUser] = useState<CustomerUser | null>(() => {
@@ -123,7 +130,7 @@ export default function App() {
     }
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [customerTab, setCustomerTab] = useState<'shop' | 'services' | 'orders'>('shop');
+  const [customerTab, setCustomerTab] = useState<'shop' | 'services' | 'old_items' | 'orders'>('shop');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCustomerPanelOpen, setIsCustomerPanelOpen] = useState(false);
 
@@ -181,6 +188,7 @@ export default function App() {
     const unsubPartners = subscribeDeliveryPartners((data) => setDeliveryPartners(data));
     const unsubServices = subscribeServices((data) => setServices(data));
     const unsubBookings = subscribeServiceBookings((data) => setServiceBookings(data));
+    const unsubOldItems = subscribeOldItems((data) => setOldItems(data));
 
     return () => {
       unsubProducts();
@@ -189,6 +197,7 @@ export default function App() {
       unsubPartners();
       unsubServices();
       unsubBookings();
+      unsubOldItems();
     };
   }, []);
 
@@ -350,12 +359,31 @@ export default function App() {
     return newId;
   };
 
+  // Old Items CRUD Handlers
+  const handleAddOldItem = async (itemData: Omit<OldItem, 'id'>) => {
+    const newId = await addOldItemDoc(itemData);
+    const createdItem: OldItem = { ...itemData, id: newId };
+    setOldItems(prev => [createdItem, ...prev.filter(it => it.id !== newId)]);
+    return newId;
+  };
+
+  const handleUpdateOldItem = async (id: string, updates: Partial<OldItem>) => {
+    await updateOldItemDoc(id, updates);
+    setOldItems(prev => prev.map(it => it.id === id ? { ...it, ...updates } : it));
+  };
+
+  const handleDeleteOldItem = async (id: string) => {
+    await deleteOldItemDoc(id);
+    setOldItems(prev => prev.filter(it => it.id !== id));
+  };
+
   // Seed sample database defaults
   const handleSeedDefaults = async () => {
     await seedProducts();
     await seedVendors();
     await seedDeliveryPartners();
     await seedServices();
+    await seedOldItems();
   };
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -457,12 +485,28 @@ export default function App() {
             onAddService={handleAddService}
             onDeleteService={handleDeleteService}
             onCreateBooking={handleCreateBooking}
+            oldItems={oldItems}
+            onAddOldItem={handleAddOldItem}
+            onUpdateOldItem={handleUpdateOldItem}
+            onDeleteOldItem={handleDeleteOldItem}
             isCartOpen={isCartOpen}
             onCloseCart={() => setIsCartOpen(false)}
             onOpenCart={() => setIsCartOpen(true)}
             customerUser={customerUser}
             onRequireLogin={triggerCustomerLogin}
             onOpenCustomerPanel={handleOpenCustomerPanel}
+          />
+        )}
+
+        {currentRole === 'old_items' && (
+          <OldItemsPanel
+            oldItems={oldItems}
+            onAddOldItem={handleAddOldItem}
+            onUpdateOldItem={handleUpdateOldItem}
+            onDeleteOldItem={handleDeleteOldItem}
+            customerUser={customerUser}
+            onRequireLogin={triggerCustomerLogin}
+            isAdmin={false}
           />
         )}
 
