@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { OldItem, CustomerUser } from '../types';
+import { shareOldItemToWhatsApp } from '../utils/whatsappShare';
 import { 
   Plus, 
   Search, 
@@ -270,16 +271,7 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
   };
 
   const handleShareItem = (item: OldItem) => {
-    const text = `पुराना सामान बिक्री के लिए उपलब्ध: ${item.title} मात्र ₹${item.price.toLocaleString('en-IN')} में! स्थिति: ${item.condition}। संपर्क: ${item.sellerPhone} (${item.location})`;
-    if (navigator.share) {
-      navigator.share({
-        title: item.title,
-        text,
-        url: window.location.href
-      }).catch(() => {});
-    } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    }
+    shareOldItemToWhatsApp(item);
   };
 
   return (
@@ -706,15 +698,18 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-
-                        <button
-                          onClick={() => handleShareItem(item)}
-                          className="p-2.5 rounded-2xl bg-stone-100 text-stone-700 hover:bg-stone-200 font-bold text-xs transition-all cursor-pointer"
-                          title="शेयर करें"
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </button>
                       </div>
+
+                      {/* WhatsApp Status Share Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleShareItem(item)}
+                        className="w-full bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] border border-[#25D366]/40 font-bold text-xs py-2 px-3 rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+                        title="व्हाट्सएप स्टेटस पर शेयर करें"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>WhatsApp स्टेटस पर शेयर करें</span>
+                      </button>
 
                       {/* Admin / Seller Manage controls */}
                       {(isAdmin || (customerUser?.phone && item.sellerPhone?.includes(customerUser.phone.slice(-10)))) && (
@@ -1281,10 +1276,10 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="pt-2 flex items-center gap-3">
+                <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                   <button
                     onClick={() => handleCallSeller(selectedDetailItem.sellerPhone, selectedDetailItem.title)}
-                    className="flex-1 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+                    className="w-full sm:flex-1 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
                   >
                     <Phone className="w-4 h-4" />
                     <span>सीधा कॉल करें ({selectedDetailItem.sellerPhone})</span>
@@ -1292,7 +1287,7 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
 
                   <button
                     onClick={() => handleWhatsAppSeller(selectedDetailItem.whatsappPhone || selectedDetailItem.sellerPhone, selectedDetailItem.title, selectedDetailItem.price)}
-                    className="px-5 py-3.5 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black text-sm flex items-center justify-center gap-2 border border-emerald-300 transition-all cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black text-sm flex items-center justify-center gap-2 border border-emerald-300 transition-all cursor-pointer"
                   >
                     <MessageCircle className="w-5 h-5 text-emerald-700" />
                     <span>WhatsApp</span>
@@ -1300,10 +1295,11 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
 
                   <button
                     onClick={() => handleShareItem(selectedDetailItem)}
-                    className="p-3.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold transition-all cursor-pointer"
-                    title="शेयर करें"
+                    className="w-full sm:w-auto px-4 py-3.5 rounded-2xl bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] border border-[#25D366]/40 font-black text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    title="WhatsApp स्टेटस पर शेयर करें"
                   >
-                    <Share2 className="w-5 h-5" />
+                    <Share2 className="w-4 h-4" />
+                    <span>WhatsApp स्टेटस</span>
                   </button>
                 </div>
 

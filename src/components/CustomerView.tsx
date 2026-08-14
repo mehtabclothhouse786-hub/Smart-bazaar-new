@@ -24,12 +24,14 @@ import {
   LogIn,
   Search,
   UserCheck,
-  Package
+  Package,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SMART_DELIVERY_UPI } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
 import { OldItemsPanel } from './OldItemsPanel';
+import { shareProductToWhatsApp } from '../utils/whatsappShare';
 
 interface CustomerViewProps {
   products: Product[];
@@ -553,8 +555,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                             </div>
                           </div>
 
-                          {/* Add to cart / Qty button */}
-                          <div className="mt-3">
+                          {/* Add to cart / Qty button & WhatsApp Status Share */}
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                             {cartItem ? (
                               <div className="inline-flex items-center bg-emerald-50 border border-emerald-300 rounded-xl overflow-hidden">
                                 <button
@@ -574,10 +576,10 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <button
                                   onClick={() => guardAction(() => onAddToCart(product), 'कार्ट में प्रोडक्ट जोड़ने के लिए लॉगिन करें')}
-                                  className="bg-amber-400 hover:bg-amber-500 text-stone-950 font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
+                                  className="bg-amber-400 hover:bg-amber-500 text-stone-950 font-extrabold text-xs px-2.5 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                                 >
                                   कार्ट में जोड़ें
                                 </button>
@@ -588,12 +590,23 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                                       setIsCheckoutModalOpen(true);
                                     }, 'प्रोडक्ट ऑर्डर करने के लिए लॉगिन करें');
                                   }}
-                                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95"
+                                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
                                 >
                                   अभी बुक करें
                                 </button>
                               </div>
                             )}
+
+                            {/* WhatsApp Status Share Button */}
+                            <button
+                              type="button"
+                              onClick={() => shareProductToWhatsApp(product)}
+                              className="px-2.5 py-1.5 bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold text-[11px] rounded-xl border border-[#25D366]/40 transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                              title="व्हाट्सएप स्टेटस पर शेयर करें"
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                              <span>WhatsApp स्टेटस</span>
+                            </button>
                           </div>
                         </div>
                       </div>

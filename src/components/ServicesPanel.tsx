@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ServiceProvider, ServiceBooking, CustomerUser } from '../types';
 import { updateServiceBookingBill } from '../services/db';
+import { shareServiceToWhatsApp } from '../utils/whatsappShare';
 import { 
   Phone, 
   MessageCircle, 
@@ -556,7 +557,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                     {/* Call Button */}
                     <button
                       onClick={() => handleOpenBookingModal(service, 'call')}
-                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs py-2.5 px-3 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs py-2.5 px-3 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                     >
                       <Phone className="w-4 h-4 fill-white" />
                       <span>कॉल करें</span>
@@ -565,12 +566,23 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
                     {/* WhatsApp Button */}
                     <button
                       onClick={() => handleOpenBookingModal(service, 'whatsapp')}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs py-2.5 px-3 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs py-2.5 px-3 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                     >
                       <MessageCircle className="w-4 h-4 fill-white" />
                       <span>WhatsApp</span>
                     </button>
                   </div>
+
+                  {/* WhatsApp Status Share Button */}
+                  <button
+                    type="button"
+                    onClick={() => shareServiceToWhatsApp(service)}
+                    className="w-full bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] border border-[#25D366]/40 font-bold text-xs py-2 px-3 rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+                    title="व्हाट्सएप स्टेटस पर शेयर करें"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>WhatsApp स्टेटस पर शेयर करें</span>
+                  </button>
 
                   {isProviderView && onDeleteService && (
                     <button
