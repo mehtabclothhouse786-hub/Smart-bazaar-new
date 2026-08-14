@@ -26,19 +26,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE, updateVendorPasswordDoc, updateVendorDoc, SAMPLE_VENDORS } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { Product3DIcon } from './Product3DIcon';
+import { ALL_SHOP_CATEGORIES, CURATED_PRODUCT_PHOTOS, CURATED_SHOP_PHOTOS, getCategoryPhoto } from '../utils/categoryData';
 
-const SAMPLE_PRODUCT_IMAGES = [
-  { name: 'सूती साड़ी / वस्त्र', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=500&auto=format&fit=crop&q=80' },
-  { name: 'शर्ट / कुर्ता', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1620012253295-c15cc3e65df4?w=500&auto=format&fit=crop&q=80' },
-  { name: 'सूट / लेडीज वियर', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=500&auto=format&fit=crop&q=80' },
-  { name: 'जींस / पैंट', category: 'Cloth House', url: 'https://images.unsplash.com/photo-1542272604-780c36856842?w=500&auto=format&fit=crop&q=80' },
-  { name: 'हार्डवेयर व टूल्स', category: 'Hardware', url: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=500&auto=format&fit=crop&q=80' },
-  { name: 'सैनिटरी व नल', category: 'Hardware', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&auto=format&fit=crop&q=80' },
-  { name: 'किराना व राशन', category: 'Groceries', url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&auto=format&fit=crop&q=80' },
-  { name: 'मसाले व तेल', category: 'Groceries', url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=500&auto=format&fit=crop&q=80' },
-  { name: 'ताज़ी सब्जियां', category: 'Vegetables', url: 'https://images.unsplash.com/photo-1518843875459-f738682238a6?w=500&auto=format&fit=crop&q=80' },
-  { name: 'ताजे फल', category: 'Vegetables', url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=500&auto=format&fit=crop&q=80' },
-];
+const SAMPLE_PRODUCT_IMAGES = CURATED_PRODUCT_PHOTOS;
 
 interface VendorViewProps {
   vendors: Vendor[];
@@ -160,7 +151,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
         status: 'active',
         rating: 5.0,
         totalOrders: 0,
-        imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500&auto=format&fit=crop&q=80',
+        imageUrl: getCategoryPhoto(finalCategory, regShopName.trim()),
         username: regUsername.trim().toLowerCase() || regShopName.trim().toLowerCase().replace(/\s+/g, ''),
         password: regPassword.trim() || '123',
         securityQuestion: 'आपका सुरक्षा शब्द क्या है?',
@@ -399,7 +390,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
         deliveryMode: prodDeliveryMode,
         stock: Number(prodStock),
         unit: finalUnit,
-        imageUrl: prodImageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500',
+        imageUrl: prodImageUrl || getCategoryPhoto(finalCategory, prodName),
         description: prodShortDesc.trim() || ('Store item from ' + currentVendor.shopName)
       });
 
@@ -590,12 +581,11 @@ export const VendorView: React.FC<VendorViewProps> = ({
                         }}
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500 text-xs"
                       >
-                        <option value="कपड़े (Clothing)">कपड़े (Clothing)</option>
-                        <option value="हार्डवेयर (Hardware)">हार्डवेयर (Hardware)</option>
-                        <option value="सैनिटरी (Sanitaryware)">सैनिटरी (Sanitaryware)</option>
-                        <option value="किराना (Grocery)">किराना (Grocery)</option>
-                        <option value="इलेक्ट्रॉनिक्स (Electronics)">इलेक्ट्रॉनिक्स (Electronics)</option>
-                        <option value="जनरल स्टोर (General Store)">जनरल स्टोर (General Store)</option>
+                        {ALL_SHOP_CATEGORIES.map(cat => (
+                          <option key={cat.id} value={`${cat.hindiName} (${cat.name})`}>
+                            {cat.hindiName} ({cat.name})
+                          </option>
+                        ))}
                         <option value="__custom__">✏️ + कस्टम श्रेणी एडिट/लिखें (Custom)</option>
                       </select>
                     ) : (
@@ -752,9 +742,13 @@ export const VendorView: React.FC<VendorViewProps> = ({
       
       {/* Vendor Shop Banner Header */}
       <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-stone-900 font-extrabold text-2xl flex items-center justify-center shadow-md shrink-0">
-            <Store className="w-6 h-6" />
+        <div className="flex items-center gap-3.5">
+          <div className="w-14 h-14 rounded-2xl bg-stone-100 border border-stone-200 overflow-hidden shadow-sm shrink-0 flex items-center justify-center">
+            <img
+              src={getCategoryPhoto(currentVendor.category, currentVendor.shopName, currentVendor.id, currentVendor.imageUrl)}
+              alt={currentVendor.shopName}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -763,8 +757,8 @@ export const VendorView: React.FC<VendorViewProps> = ({
                 Active Vendor
               </span>
             </div>
-            <p className="text-xs text-stone-500">
-              मालिक: {currentVendor.ownerName} • फोन: {currentVendor.phone} • {currentVendor.address}
+            <p className="text-xs text-stone-500 mt-0.5">
+              श्रेणी: <strong className="text-emerald-800">{currentVendor.category}</strong> • मालिक: {currentVendor.ownerName} • फोन: {currentVendor.phone}
             </p>
           </div>
         </div>
@@ -780,10 +774,10 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
           <button
             onClick={() => setIsAddProductModalOpen(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+            className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-black text-xs px-4 py-2.5 rounded-2xl flex items-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer border border-amber-300"
           >
-            <Plus className="w-4 h-4" />
-            <span>+ नया प्रोडक्ट जोड़ें</span>
+            <Product3DIcon size="xs" variant="add" />
+            <span>+ नया 3D प्रोडक्ट जोड़ें</span>
           </button>
 
           <button
@@ -857,7 +851,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
                 : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
             }`}
           >
-            <PackageCheck className="w-4 h-4" />
+            <Product3DIcon size="xs" />
             <span>प्रोडक्ट्स सूची ({vendorProducts.length})</span>
           </button>
 
@@ -971,84 +965,126 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
       {/* TAB 2: PRODUCTS MANAGER */}
       {activeTab === 'products' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {vendorProducts.map(prod => (
-            <div key={prod.id} className="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-sm space-y-3 flex flex-col justify-between">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-stone-200 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Product3DIcon size="md" animate />
               <div>
-                <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-100 mb-2">
-                  <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-cover" />
-                  <span className={`absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded-full ${
-                    prod.stock > 0 ? 'bg-emerald-700 text-white' : 'bg-red-600 text-white'
-                  }`}>
-                    {prod.stock > 0 ? `स्टॉक: ${prod.stock}` : 'आउट ऑफ स्टॉक'}
+                <h3 className="font-extrabold text-stone-900 text-sm flex items-center gap-1.5">
+                  <span>आपकी दुकान के 3D प्रोडक्ट्स</span>
+                  <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-300">
+                    {vendorProducts.length} आइटम्स
                   </span>
-                </div>
-
-                <div className="text-[11px] font-bold text-emerald-700 uppercase">{prod.category} • {prod.unit}</div>
-                <h3 className="font-extrabold text-stone-900 text-xs line-clamp-1">{prod.name}</h3>
-                {(prod.shortDescription || prod.description) && (
-                  <p className="text-[10px] text-stone-600 font-medium line-clamp-1 mt-0.5 bg-stone-50 px-1.5 py-0.5 rounded border border-stone-200">
-                    {prod.shortDescription || prod.description}
-                  </p>
-                )}
-                
-                <div className="mt-2 text-xs text-stone-600 space-y-0.5">
-                  <div>विक्रेता रेट (Cost): <strong className="text-stone-900">₹{prod.costPrice || Math.round(prod.price / 1.25)}</strong></div>
-                  <div>ग्राहक मूल्य (+25%): <strong className="text-emerald-800">₹{prod.price}</strong></div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => onUpdateProduct(prod.id, { stock: prod.stock > 0 ? 0 : 30 })}
-                  className="text-xs font-bold px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200"
-                >
-                  {prod.stock > 0 ? 'स्टॉक ख़त्म' : 'स्टॉक री-स्टॉक'}
-                </button>
-
-                {deletingProdId === prod.id ? (
-                  <div className="flex items-center gap-1.5 animate-fadeIn">
-                    <button
-                      type="button"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const idToDelete = prod.id;
-                        setDeletingProdId(null);
-                        await onDeleteProduct(idToDelete);
-                      }}
-                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[11px] font-extrabold rounded-lg shadow-xs flex items-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>हाँ, हटाएं</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingProdId(null);
-                      }}
-                      className="px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-800 text-[11px] font-bold rounded-lg cursor-pointer"
-                    >
-                      रद्द
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeletingProdId(prod.id);
-                    }}
-                    className="p-1.5 text-stone-600 hover:text-red-600 hover:bg-red-50 bg-red-50/50 border border-red-200 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                    title="हटाएं (Remove)"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                    <span className="text-[11px] font-bold text-red-600">हटाएं</span>
-                  </button>
-                )}
+                </h3>
+                <p className="text-xs text-stone-500">कैटलॉग में नया सामान जोड़ें या मूल्य व स्टॉक अपडेट करें</p>
               </div>
             </div>
-          ))}
+
+            <button
+              onClick={() => setIsAddProductModalOpen(true)}
+              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer border border-amber-300"
+            >
+              <Product3DIcon size="xs" variant="add" />
+              <span>+ नया प्रोडक्ट जोड़ें</span>
+            </button>
+          </div>
+
+          {vendorProducts.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-stone-200 space-y-3">
+              <Product3DIcon size="xl" animate className="mx-auto" />
+              <h3 className="font-extrabold text-stone-900 text-base">आपकी दुकान में अभी कोई प्रोडक्ट नहीं है</h3>
+              <p className="text-stone-500 text-xs max-w-sm mx-auto">
+                नीचे दिए गए बटन पर क्लिक करके अपनी दुकान का पहला प्रोडक्ट जोड़ें और ऑनलाइन बिक्री शुरू करें।
+              </p>
+              <button
+                onClick={() => setIsAddProductModalOpen(true)}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Product3DIcon size="xs" variant="add" />
+                <span>+ पहला प्रोडक्ट जोड़ें</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {vendorProducts.map(prod => (
+                <div key={prod.id} className="bg-white border border-stone-200 rounded-2xl p-3.5 shadow-sm space-y-3 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div>
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-100 mb-2">
+                      <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-cover" />
+                      <span className={`absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        prod.stock > 0 ? 'bg-emerald-700 text-white' : 'bg-red-600 text-white'
+                      }`}>
+                        {prod.stock > 0 ? `स्टॉक: ${prod.stock}` : 'आउट ऑफ स्टॉक'}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] font-bold text-emerald-700 uppercase">{prod.category} • {prod.unit}</div>
+                    <h3 className="font-extrabold text-stone-900 text-xs line-clamp-1">{prod.name}</h3>
+                    {(prod.shortDescription || prod.description) && (
+                      <p className="text-[10px] text-stone-600 font-medium line-clamp-1 mt-0.5 bg-stone-50 px-1.5 py-0.5 rounded border border-stone-200">
+                        {prod.shortDescription || prod.description}
+                      </p>
+                    )}
+                    
+                    <div className="mt-2 text-xs text-stone-600 space-y-0.5">
+                      <div>विक्रेता रेट (Cost): <strong className="text-stone-900">₹{prod.costPrice || Math.round(prod.price / 1.25)}</strong></div>
+                      <div>ग्राहक मूल्य (+25%): <strong className="text-emerald-800">₹{prod.price}</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => onUpdateProduct(prod.id, { stock: prod.stock > 0 ? 0 : 30 })}
+                      className="text-xs font-bold px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200 cursor-pointer"
+                    >
+                      {prod.stock > 0 ? 'स्टॉक ख़त्म' : 'स्टॉक री-स्टॉक'}
+                    </button>
+
+                    {deletingProdId === prod.id ? (
+                      <div className="flex items-center gap-1.5 animate-fadeIn">
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const idToDelete = prod.id;
+                            setDeletingProdId(null);
+                            await onDeleteProduct(idToDelete);
+                          }}
+                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[11px] font-extrabold rounded-lg shadow-xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>हाँ, हटाएं</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingProdId(null);
+                          }}
+                          className="px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-800 text-[11px] font-bold rounded-lg cursor-pointer"
+                        >
+                          रद्द
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingProdId(prod.id);
+                        }}
+                        className="p-1.5 text-stone-600 hover:text-red-600 hover:bg-red-50 bg-red-50/50 border border-red-200 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                        title="हटाएं (Remove)"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                        <span className="text-[11px] font-bold text-red-600">हटाएं</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1088,10 +1124,16 @@ export const VendorView: React.FC<VendorViewProps> = ({
               className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-stone-200 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-4">
-                <h3 className="font-extrabold text-base text-stone-900">नया प्रोडक्ट जोड़ें (+25% मार्जिन)</h3>
+                <div className="flex items-center gap-2.5">
+                  <Product3DIcon size="sm" animate withBadge badgeText="3D" />
+                  <div>
+                    <h3 className="font-extrabold text-base text-stone-900">नया 3D प्रोडक्ट जोड़ें</h3>
+                    <p className="text-[11px] text-emerald-700 font-bold">+25% स्वचालित मार्जिन सिस्टम</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setIsAddProductModalOpen(false)}
-                  className="p-1 text-stone-400 hover:text-stone-700"
+                  className="p-1 text-stone-400 hover:text-stone-700 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1174,18 +1216,18 @@ export const VendorView: React.FC<VendorViewProps> = ({
                             setIsCustomProdCategory(true);
                           } else {
                             setProdCategory(e.target.value);
+                            if (!prodImageUrl) {
+                              setProdImageUrl(getCategoryPhoto(e.target.value, prodName));
+                            }
                           }
                         }}
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
                       >
-                        <option value="Cloth House">कपड़ा व परिधान (Cloth House)</option>
-                        <option value="Hardware">हार्डवेयर व सेनेटरी (Hardware)</option>
-                        <option value="Groceries">किराना व अनाज (Groceries)</option>
-                        <option value="Vegetables">सब्ज़ियां व फल (Vegetables)</option>
-                        <option value="Electronics">इलेक्ट्रॉनिक्स व गैजेट्स (Electronics)</option>
-                        <option value="Footwear">जूते व चप्पल (Footwear)</option>
-                        <option value="Cosmetics">कॉस्मेटिक्स व ब्यूटी (Cosmetics)</option>
-                        <option value="Stationery">स्टेशनरी व बुक्स (Stationery)</option>
+                        {ALL_SHOP_CATEGORIES.map(cat => (
+                          <option key={cat.id} value={cat.name}>
+                            {cat.hindiName} ({cat.name})
+                          </option>
+                        ))}
                         <option value="__custom__">✏️ + कस्टम श्रेणी नाम खुद दर्ज करें (Custom)</option>
                       </select>
                     ) : (

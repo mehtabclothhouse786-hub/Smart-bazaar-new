@@ -31,6 +31,8 @@ import {
   restoreAllDefaults
 } from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { Product3DIcon } from './Product3DIcon';
+import { ALL_SHOP_CATEGORIES, CURATED_SHOP_PHOTOS, getCategoryPhoto } from '../utils/categoryData';
 
 interface AdminViewProps {
   products: Product[];
@@ -236,7 +238,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         status: 'active',
         rating: 4.8,
         totalOrders: 0,
-        imageUrl: vImageUrl.trim() || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500&auto=format&fit=crop&q=80',
+        imageUrl: vImageUrl.trim() || getCategoryPhoto(finalVCat, vShopName),
         username: vUsername.trim().toLowerCase() || vShopName.toLowerCase().replace(/\s+/g, ''),
         password: vPassword.trim() || '123',
         securityQuestion: 'आपका सुरक्षा शब्द (Security Word) क्या है?',
@@ -525,10 +527,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="text-[11px] text-stone-500 mt-1">Pending delivery</div>
         </div>
 
-        <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm">
-          <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Live Products Catalog</div>
-          <div className="text-2xl font-black text-emerald-600">{products.length}</div>
-          <div className="text-[11px] text-stone-500 mt-1">In Firestore db</div>
+        <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Live Products Catalog</div>
+            <div className="text-2xl font-black text-emerald-600">{products.length}</div>
+            <div className="text-[11px] text-stone-500 mt-1">In Firestore db</div>
+          </div>
+          <Product3DIcon size="md" animate />
         </div>
 
         <div className="bg-white border border-stone-200 p-4 rounded-2xl shadow-sm">
@@ -553,13 +558,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'products'
               ? 'bg-stone-900 text-white shadow-sm'
               : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
           }`}
         >
-          Products Catalog ({products.length})
+          <Product3DIcon size="xs" />
+          <span>Products Catalog ({products.length})</span>
         </button>
 
         <button
@@ -735,12 +741,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {activeTab === 'products' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between bg-stone-900 text-white p-4 rounded-2xl">
-            <div>
-              <h2 className="font-extrabold text-sm flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-emerald-400" />
-                <span>मार्केटप्लेस प्रोडक्ट कैटलॉग (Products Catalog - {products.length})</span>
-              </h2>
-              <p className="text-xs text-stone-300 mt-0.5">लाइव प्रोडक्ट्स की लिस्ट एवं डिलीट / रिमूव नियंत्रण</p>
+            <div className="flex items-center gap-3">
+              <Product3DIcon size="md" animate />
+              <div>
+                <h2 className="font-extrabold text-sm flex items-center gap-2">
+                  <span>मार्केटप्लेस 3D प्रोडक्ट कैटलॉग (Products Catalog - {products.length})</span>
+                </h2>
+                <p className="text-xs text-stone-300 mt-0.5">लाइव प्रोडक्ट्स की लिस्ट एवं डिलीट / रिमूव नियंत्रण</p>
+              </div>
             </div>
           </div>
 
@@ -848,9 +856,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div key={v.id} className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm space-y-3 relative group hover:border-emerald-300 transition-all">
                 <div className="flex items-center gap-3">
                   <img
-                    src={v.imageUrl}
+                    src={getCategoryPhoto(v.category, v.shopName, v.id, v.imageUrl)}
                     alt={v.shopName}
-                    className="w-12 h-12 rounded-xl object-cover border border-stone-100"
+                    className="w-12 h-12 rounded-xl object-cover border border-stone-100 shrink-0"
                   />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-extrabold text-stone-900 text-sm truncate">{v.shopName}</h3>
@@ -1141,16 +1149,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           setIsCustomVCategory(true);
                         } else {
                           setVCategory(e.target.value);
+                          if (!vImageUrl) {
+                            setVImageUrl(getCategoryPhoto(e.target.value));
+                          }
                         }
                       }}
                       className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500 text-xs"
                     >
-                      <option value="कपड़े (Clothing)">कपड़े (Clothing)</option>
-                      <option value="हार्डवेयर (Hardware)">हार्डवेयर (Hardware)</option>
-                      <option value="सैनिटरी (Sanitaryware)">सैनिटरी (Sanitaryware)</option>
-                      <option value="किराना (Grocery)">किराना (Grocery)</option>
-                      <option value="इलेक्ट्रॉनिक्स (Electronics)">इलेक्ट्रॉनिक्स (Electronics)</option>
-                      <option value="जनरल स्टोर (General Store)">जनरल स्टोर (General Store)</option>
+                      {ALL_SHOP_CATEGORIES.map(cat => (
+                        <option key={cat.id} value={`${cat.hindiName} (${cat.name})`}>
+                          {cat.hindiName} ({cat.name})
+                        </option>
+                      ))}
                       <option value="__custom__">✏️ + कस्टम श्रेणी एडिट/लिखें (Custom)</option>
                     </select>
                   ) : (
@@ -1184,8 +1194,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   value={vImageUrl}
                   onChange={e => setVImageUrl(e.target.value)}
                   placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 mb-2"
                 />
+
+                {/* Curated Category Shop Photo Selector */}
+                <div>
+                  <span className="block text-[11px] font-bold text-stone-600 mb-1">
+                    या नीचे से श्रेणी अनुसार फ़ोटो चुनें (Click to Select):
+                  </span>
+                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    {CURATED_SHOP_PHOTOS.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setVImageUrl(p.url)}
+                        className={`shrink-0 border-2 rounded-xl p-1 bg-white text-left transition-all ${
+                          vImageUrl === p.url ? 'border-emerald-600 ring-2 ring-emerald-500/20' : 'border-stone-200 hover:border-emerald-400'
+                        }`}
+                      >
+                        <img src={p.url} alt={p.name} className="w-12 h-12 object-cover rounded-lg mb-1" />
+                        <span className="block text-[9px] font-bold text-stone-800 max-w-[60px] truncate">{p.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="p-3 bg-stone-50 border border-stone-200 rounded-2xl space-y-2">
@@ -1569,6 +1601,39 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     onChange={e => setEditingVendor({ ...editingVendor, password: e.target.value })}
                     className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">दुकान की फ़ोटो (Shop Photo URL)</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 overflow-hidden shrink-0">
+                    <img
+                      src={getCategoryPhoto(editingVendor.category, editingVendor.shopName, editingVendor.id, editingVendor.imageUrl)}
+                      alt={editingVendor.shopName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <input
+                    type="url"
+                    value={editingVendor.imageUrl || ''}
+                    onChange={e => setEditingVendor({ ...editingVendor, imageUrl: e.target.value })}
+                    placeholder="फ़ोटो URL दर्ज करें या नीचे से चुनें"
+                    className="flex-1 px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none text-xs font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
+                  {CURATED_SHOP_PHOTOS.slice(0, 6).map((photo, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setEditingVendor({ ...editingVendor, imageUrl: photo.url })}
+                      className="shrink-0 text-[10px] bg-stone-100 hover:bg-emerald-50 hover:text-emerald-800 border border-stone-200 rounded-lg px-2 py-1 font-bold transition-colors flex items-center gap-1"
+                    >
+                      <span>{photo.name.split(' ')[0]}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 

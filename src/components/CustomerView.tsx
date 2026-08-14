@@ -32,6 +32,8 @@ import { SMART_DELIVERY_UPI } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
 import { OldItemsPanel } from './OldItemsPanel';
 import { shareProductToWhatsApp } from '../utils/whatsappShare';
+import { Product3DIcon } from './Product3DIcon';
+import { ALL_SHOP_CATEGORIES, getCategoryPhoto } from '../utils/categoryData';
 
 interface CustomerViewProps {
   products: Product[];
@@ -257,7 +259,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 : 'bg-white/80 hover:bg-white text-stone-700 font-bold hover:shadow-xs'
             }`}
           >
-            <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <Product3DIcon size="xs" />
             <span className="text-[11px] sm:text-xs md:text-sm tracking-tight whitespace-nowrap">
               दुकान <span className="hidden xs:inline">(Shop)</span>
             </span>
@@ -322,7 +324,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           {customerShopView === 'list' ? (
             /* ALL SHOPS LIST VIEW */
             <div>
-              <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-900 rounded-3xl p-5 sm:p-6 text-white mb-6 shadow-md relative overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-900 rounded-3xl p-5 sm:p-6 text-white mb-6 shadow-md relative overflow-hidden flex items-center justify-between gap-4">
                 <div className="relative z-10 max-w-xl">
                   <span className="inline-flex items-center gap-1.5 bg-emerald-950/70 text-emerald-200 px-3 py-1 rounded-full text-xs font-bold mb-3 border border-emerald-500/30">
                     <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -332,13 +334,16 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                     अपने शहर की प्रसिद्ध दुकानों से खरीदारी करें
                   </h1>
                   <p className="text-emerald-100/90 text-xs sm:text-sm font-medium">
-                    दुकान चुनें, प्रोडक्ट कैटलॉग देखें और सीधा ऑर्डर करें!
+                    दुकान चुनें, 3D प्रोडक्ट कैटलॉग देखें और सीधा ऑर्डर करें!
                   </p>
+                </div>
+                <div className="hidden sm:block shrink-0">
+                  <Product3DIcon size="xl" animate withBadge badgeText="3D" />
                 </div>
               </div>
 
               {/* Shop Search Bar */}
-              <div className="relative mb-3">
+              <div className="relative mb-4">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                 <input
                   type="text"
@@ -349,31 +354,58 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 />
               </div>
 
-              {/* Shop Category Chips */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-2">
-                {[
-                  { id: 'सभी', name: 'सभी दुकानें' },
-                  { id: 'Cloth House', name: 'कपड़ा व परिधान' },
-                  { id: 'Hardware', name: 'हार्डवेयर व सेनेटरी' },
-                  { id: 'Groceries', name: 'किराना व अनाज' },
-                  { id: 'Vegetables', name: 'सब्ज़ियां व फल' },
-                  { id: 'Electronics', name: 'इलेक्ट्रॉनिक्स' },
-                  { id: 'Footwear', name: 'जूते व चप्पल' },
-                  { id: 'Cosmetics', name: 'कॉस्मेटिक्स' },
-                  { id: 'Stationery', name: 'स्टेशनरी व बुक्स' }
-                ].map((cat) => (
+              {/* Visual Category Showcase Cards */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h2 className="text-xs font-extrabold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🏪 सभी श्रेणियां (Categories)</span>
+                  </h2>
+                  <span className="text-[11px] text-emerald-700 font-bold">
+                    {ALL_SHOP_CATEGORIES.length} श्रेणियां
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
                   <button
-                    key={cat.id}
-                    onClick={() => setSelectedShopCategory(cat.id)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
-                      selectedShopCategory === cat.id
-                        ? 'bg-emerald-800 text-white border-emerald-800 shadow-xs'
-                        : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-100'
+                    onClick={() => setSelectedShopCategory('सभी')}
+                    className={`p-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
+                      selectedShopCategory === 'सभी'
+                        ? 'bg-emerald-800 text-white border-emerald-800 shadow-md ring-2 ring-emerald-500/20 scale-[1.02]'
+                        : 'bg-white text-stone-800 border-stone-200 hover:border-emerald-300 hover:bg-stone-50 shadow-2xs'
                     }`}
                   >
-                    {cat.name}
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-800 font-black text-sm">
+                      ALL
+                    </div>
+                    <span className="text-[11px] font-extrabold leading-tight">सभी दुकानें</span>
                   </button>
-                ))}
+
+                  {ALL_SHOP_CATEGORIES.map((cat) => {
+                    const isSelected = selectedShopCategory === cat.hindiName || selectedShopCategory === cat.name;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedShopCategory(cat.hindiName)}
+                        className={`p-2 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group ${
+                          isSelected
+                            ? 'bg-emerald-800 text-white border-emerald-800 shadow-md ring-2 ring-emerald-500/20 scale-[1.02]'
+                            : 'bg-white text-stone-800 border-stone-200 hover:border-emerald-300 hover:bg-stone-50 shadow-2xs'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-xl overflow-hidden border border-stone-200 relative shrink-0">
+                          <img
+                            src={cat.imageUrl}
+                            alt={cat.hindiName}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        </div>
+                        <span className="text-[11px] font-extrabold leading-tight line-clamp-1">
+                          {cat.hindiName}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex items-center justify-between mb-4">
@@ -423,6 +455,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 }).map(v => {
                   const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
                   const categories = Array.from(new Set(vProducts.map(p => p.category)));
+                  const shopPhoto = getCategoryPhoto(v.category, v.shopName, v.id, v.imageUrl);
 
                   return (
                     <motion.div
@@ -434,9 +467,9 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                         setCustomerShopView('catalog');
                       }}
                     >
-                      <div className="w-16 h-16 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center text-emerald-700 shrink-0 overflow-hidden">
-                        {v.imageUrl ? (
-                          <img src={v.imageUrl} alt={v.shopName} className="w-full h-full object-cover" />
+                      <div className="w-16 h-16 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center text-emerald-700 shrink-0 overflow-hidden shadow-xs">
+                        {shopPhoto ? (
+                          <img src={shopPhoto} alt={v.shopName} className="w-full h-full object-cover" />
                         ) : (
                           <Store className="w-8 h-8" />
                         )}
@@ -453,7 +486,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                           <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                             {vProducts.length} प्रोडक्ट उपलब्ध
                           </span>
-                          <span className="text-[11px] font-semibold text-stone-500">
+                          <span className="text-[11px] font-semibold text-stone-500 truncate max-w-[140px]">
                             {v.address}
                           </span>
                         </div>
@@ -465,7 +498,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                           setSelectedVendorId(v.id);
                           setCustomerShopView('catalog');
                         }}
-                        className="shrink-0 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs px-3 py-2 rounded-xl transition-colors flex items-center gap-1"
+                        className="shrink-0 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs px-3 py-2 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                       >
                         <span>कैटलॉग →</span>
                       </button>
@@ -477,26 +510,44 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
           ) : (
             /* SINGLE VENDOR CATALOG VIEW */
             <div>
-              <div className="flex items-center justify-between gap-2 mb-6 bg-white p-4 rounded-2xl border border-stone-200 shadow-sm">
+              {/* SINGLE VENDOR CATALOG HEADER */}
+              <div className="flex items-center justify-between gap-3 mb-6 bg-white p-4 rounded-3xl border border-stone-200 shadow-sm">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
                       setCustomerShopView('list');
                       setSelectedVendorId(null);
                     }}
-                    className="p-2 bg-stone-100 hover:bg-stone-200 rounded-xl text-stone-800 transition-colors flex items-center gap-1 text-xs font-bold"
+                    className="p-2.5 bg-stone-100 hover:bg-stone-200 rounded-2xl text-stone-800 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer shrink-0"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>सभी दुकानें</span>
                   </button>
+
+                  <div className="w-12 h-12 rounded-2xl bg-stone-100 overflow-hidden border border-stone-200 shrink-0">
+                    <img
+                      src={selectedVendor ? getCategoryPhoto(selectedVendor.category, selectedVendor.shopName, selectedVendor.id, selectedVendor.imageUrl) : 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500'}
+                      alt={selectedVendor?.shopName || 'Store'}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
                   <div>
-                    <h2 className="font-black text-stone-900 text-lg leading-tight">
-                      {selectedVendor ? selectedVendor.shopName : 'दुकान कैटलॉग'}
+                    <h2 className="font-black text-stone-900 text-base sm:text-lg leading-tight flex items-center gap-2">
+                      <span>{selectedVendor ? selectedVendor.shopName : 'दुकान कैटलॉग'}</span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full">
+                        {selectedVendor?.category || 'General'}
+                      </span>
                     </h2>
-                    <p className="text-xs text-stone-500 font-medium">
-                      {products.filter(p => p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName).length} प्रोडक्ट उपलब्ध
+                    <p className="text-xs text-stone-500 font-medium mt-0.5">
+                      {selectedVendor?.address && <span>{selectedVendor.address} • </span>}
+                      {products.filter(p => p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName).length} 3D प्रोडक्ट उपलब्ध
                     </p>
                   </div>
+                </div>
+
+                <div className="hidden sm:block">
+                  <Product3DIcon size="md" animate withBadge badgeText="3D" />
                 </div>
               </div>
 
