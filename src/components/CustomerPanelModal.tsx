@@ -11,8 +11,16 @@ import {
   MapPin, 
   Clock, 
   Wrench,
-  CheckCircle2
+  CheckCircle2,
+  Package,
+  Store,
+  Truck,
+  Home,
+  AlertCircle,
+  Sparkles,
+  Bike
 } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface CustomerPanelModalProps {
   isOpen: boolean;
@@ -24,6 +32,245 @@ interface CustomerPanelModalProps {
   onUpdateCustomerProfile: (updates: Partial<CustomerUser>) => void;
   onRequireLogin?: () => void;
 }
+
+// Order Status Progress Tracker Component
+const OrderStatusProgressTracker: React.FC<{ order: Order }> = ({ order }) => {
+  const isSelfPickup = order.deliveryMode === 'self';
+
+  const getStageDetails = (status: Order['status']) => {
+    if (status === 'Cancelled') {
+      return { stageIndex: -1, isCancelled: true, message: 'यह ऑर्डर रद्द कर दिया गया है।' };
+    }
+
+    switch (status) {
+      case 'Placed':
+        return {
+          stageIndex: 0,
+          isCancelled: false,
+          message: 'ऑर्डर सफलतापूर्वक दर्ज हो चुका है। दुकानदार की पुष्टि की प्रतीक्षा है।'
+        };
+      case 'Vendor Accepted':
+      case 'Vendor Confirmed':
+        return {
+          stageIndex: 1,
+          isCancelled: false,
+          message: 'दुकानदार द्वारा ऑर्डर स्वीकार कर लिया गया है।'
+        };
+      case 'Preparing':
+        return {
+          stageIndex: 1,
+          isCancelled: false,
+          message: 'दुकान पर आपका सामान पैक व तैयार किया जा रहा है।'
+        };
+      case 'Pickup Assigned':
+        return {
+          stageIndex: 1,
+          isCancelled: false,
+          message: isSelfPickup ? 'दुकान पर पिकअप के लिए सामान तैयार किया जा रहा है।' : 'डिलीवरी पार्टनर को कार्य सौंपा गया है।'
+        };
+      case 'Out for Delivery':
+      case 'In Transit':
+        return {
+          stageIndex: 2,
+          isCancelled: false,
+          message: isSelfPickup
+            ? '✅ सामान दुकान पर तैयार है! आप जाकर पिकअप कर सकते हैं।'
+            : '🚚 डिलीवरी पार्टनर सामान लेकर आपके पते की ओर निकल चुका है।'
+        };
+      case 'Delivered':
+      case 'Settlement Completed':
+        return {
+          stageIndex: 3,
+          isCancelled: false,
+          message: isSelfPickup
+            ? '🎉 सामान सफलतापूर्वक प्राप्त कर लिया गया है।'
+            : '🎉 ऑर्डर सफलतापूर्वक आपके पते पर डिलीवर हो चुका है।'
+        };
+      default:
+        return {
+          stageIndex: 0,
+          isCancelled: false,
+          message: 'ऑर्डर प्रोसेस में है।'
+        };
+    }
+  };
+
+  const { stageIndex, isCancelled, message } = getStageDetails(order.status);
+
+  const stages = [
+    {
+      step: 0,
+      label: 'दर्ज हुआ',
+      subLabel: 'Placed',
+      icon: Package
+    },
+    {
+      step: 1,
+      label: 'तैयारी जारी',
+      subLabel: 'Preparing',
+      icon: Store
+    },
+    {
+      step: 2,
+      label: isSelfPickup ? 'पिकअप तैयार' : 'रास्ते में है',
+      subLabel: isSelfPickup ? 'Ready' : 'On The Way',
+      icon: isSelfPickup ? Store : Bike
+    },
+    {
+      step: 3,
+      label: isSelfPickup ? 'प्राप्त हुआ' : 'डिलीवर हुआ',
+      subLabel: 'Delivered',
+      icon: Home
+    }
+  ];
+
+  if (isCancelled) {
+    return (
+      <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 flex items-center gap-3 text-rose-800">
+        <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+          <AlertCircle className="w-5 h-5" />
+        </div>
+        <div>
+          <div className="font-extrabold text-xs sm:text-sm">ऑर्डर रद्द (Cancelled)</div>
+          <p className="text-[11px] text-rose-600 font-medium mt-0.5">{message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate percentage width for progress line: 0% at step 0, 33.3% at step 1, 66.6% at step 2, 100% at step 3
+  const progressPercentage = Math.min(100, Math.max(0, (stageIndex / 3) * 100));
+
+  return (
+    <div className="bg-gradient-to-b from-stone-50 to-white border border-stone-200 rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+      {/* Tracker Header */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          {stageIndex < 3 ? (
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-600"></span>
+            </span>
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          )}
+          <span className="text-xs font-black text-stone-800 uppercase tracking-wider">
+            लाइव स्टेटस ट्रैकर (Live Progress)
+          </span>
+        </div>
+
+        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${
+          stageIndex === 3 
+            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+            : 'bg-emerald-700 text-white shadow-2xs'
+        }`}>
+          चरण {stageIndex + 1} / 4 • {stages[stageIndex]?.label}
+        </span>
+      </div>
+
+      {/* Progress Animation Bar & Step Nodes */}
+      <div className="pt-2 pb-1 px-2 sm:px-4">
+        <div className="relative">
+          {/* Background Bar Track */}
+          <div className="h-2 bg-stone-200 rounded-full w-full relative overflow-hidden">
+            {/* Animated Fill Bar */}
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercentage}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              className="h-full bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 rounded-full relative"
+            >
+              {/* Shimmer Light on Active Bar */}
+              {stageIndex < 3 && (
+                <motion.div
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ repeat: Infinity, duration: 1.6, ease: 'linear' }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-1/2 h-full"
+                />
+              )}
+            </motion.div>
+          </div>
+
+          {/* 4 Step Icon Nodes */}
+          <div className="flex justify-between items-start -mt-4 relative">
+            {stages.map((stage) => {
+              const isCompleted = stage.step < stageIndex;
+              const isCurrent = stage.step === stageIndex;
+              const isUpcoming = stage.step > stageIndex;
+              const StageIcon = stage.icon;
+
+              return (
+                <div key={stage.step} className="flex flex-col items-center group">
+                  {/* Node Icon Circle */}
+                  <div className="relative flex items-center justify-center">
+                    {/* Ripple on active node */}
+                    {isCurrent && stageIndex < 3 && (
+                      <motion.span
+                        animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0, 0.7] }}
+                        transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+                        className="absolute w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-400 -z-10"
+                      />
+                    )}
+
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scale: isCurrent ? 1.12 : 1,
+                      }}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs transition-colors shadow-xs ${
+                        isCompleted
+                          ? 'bg-emerald-600 text-white ring-2 ring-emerald-200'
+                          : isCurrent
+                            ? 'bg-emerald-700 text-white ring-3 ring-emerald-300 shadow-md'
+                            : 'bg-white border-2 border-stone-300 text-stone-400'
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-4 h-4 text-white" />
+                      ) : (
+                        <StageIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      )}
+                    </motion.div>
+                  </div>
+
+                  {/* Stage Labels */}
+                  <div className="text-center mt-1.5 max-w-[65px] sm:max-w-[85px]">
+                    <div className={`text-[10px] sm:text-[11px] leading-tight transition-colors ${
+                      isCurrent
+                        ? 'font-black text-emerald-800'
+                        : isCompleted
+                          ? 'font-bold text-stone-800'
+                          : 'font-medium text-stone-400'
+                    }`}>
+                      {stage.label}
+                    </div>
+                    <div className={`text-[8px] sm:text-[9px] tracking-tight mt-0.5 ${
+                      isCurrent ? 'font-bold text-emerald-600' : 'text-stone-400'
+                    }`}>
+                      {stage.subLabel}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Status Explanation Banner */}
+      <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 border ${
+        stageIndex === 3
+          ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+          : 'bg-stone-100/90 text-stone-800 border-stone-200'
+      }`}>
+        <Sparkles className={`w-4 h-4 shrink-0 ${stageIndex === 3 ? 'text-emerald-600' : 'text-amber-600'}`} />
+        <span className="font-semibold text-[11px] sm:text-xs">
+          {message}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 export const CustomerPanelModal: React.FC<CustomerPanelModalProps> = ({
   isOpen,
@@ -302,6 +549,9 @@ export const CustomerPanelModal: React.FC<CustomerPanelModalProps> = ({
                             </div>
                           )}
                         </div>
+
+                        {/* Visual Animated Order Status Progress Bar Tracker */}
+                        <OrderStatusProgressTracker order={order} />
 
                         {/* Estimated Delivery Time Banner */}
                         {!isDelivered && !isCancelled && (
