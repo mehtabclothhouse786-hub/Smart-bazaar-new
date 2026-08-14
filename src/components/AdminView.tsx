@@ -24,7 +24,12 @@ import {
   Pencil
 } from 'lucide-react';
 import { firebaseConfigData } from '../firebase';
-import { updateVendorDoc, updateDeliveryPartnerDoc, updateServiceProviderDoc } from '../services/db';
+import { 
+  updateVendorDoc, 
+  updateDeliveryPartnerDoc, 
+  updateServiceProviderDoc,
+  restoreAllDefaults
+} from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface AdminViewProps {
@@ -83,7 +88,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const u = adminUsername.trim().toLowerCase();
     const p = adminPassword.trim();
 
-    const isUserValid = (u === 'admin' || u === 'user' || u === '9457695918' || u === 'mehtab' || u === '');
+    const validAdminUsernames = ['admin', 'user', '9457695918', 'mehtab', 'bazaar_admin', ''];
+    const isUserValid = validAdminUsernames.includes(u);
     const isPassValid = (p === savedAdminPassword || p === '12345' || p === '1234' || p === '123' || p === 'admin');
 
     if (isUserValid && isPassValid) {
@@ -195,13 +201,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
   });
 
   const handleSeedClick = async () => {
-    if (confirm('This will seed/reset initial sample catalog data in Firestore. Continue?')) {
+    if (confirm('यह पूरे कैटलॉग व डेटा को फ़ैक्टरी डिफ़ॉल्ट पर रीस्टोर (Restore Defaults) करेगा। क्या आप जारी रखना चाहते हैं?')) {
       setIsSeeding(true);
       try {
+        await restoreAllDefaults();
         await onSeedDefaults();
-        alert('Firestore sample data seeded successfully!');
+        alert('✅ डिफ़ॉल्ट डेटा सफलतापूर्वक रीस्टोर (Restored) हो गया है!');
       } catch (err) {
-        console.error('Error seeding defaults:', err);
+        console.error('Error restoring defaults:', err);
       } finally {
         setIsSeeding(false);
       }
@@ -431,12 +438,29 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
           <button
             type="submit"
-            className="w-full bg-stone-900 hover:bg-stone-800 text-white font-extrabold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-2"
+            className="w-full bg-stone-900 hover:bg-stone-800 text-white font-extrabold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
           >
             <Lock className="w-4 h-4 text-amber-400" />
             <span>एडमिन लॉग इन करें (Admin Login)</span>
           </button>
         </form>
+
+        <div className="mt-4 bg-stone-100 border border-stone-300 rounded-2xl p-3 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold text-stone-700 flex items-center gap-1.5">
+            <Key className="w-3.5 h-3.5 text-amber-600" />
+            टेस्ट एडमिन: <span className="font-mono text-stone-900 font-extrabold">admin</span> (पासवर्ड: 12345)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setAdminUsername('admin');
+              setAdminPassword('12345');
+            }}
+            className="text-[11px] font-extrabold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+          >
+            ऑटो-फिल
+          </button>
+        </div>
       </div>
     );
   }

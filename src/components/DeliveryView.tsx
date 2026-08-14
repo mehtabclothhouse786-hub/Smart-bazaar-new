@@ -24,7 +24,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { updatePartnerPasswordDoc, updateDeliveryPartnerDoc } from '../services/db';
+import { updatePartnerPasswordDoc, updateDeliveryPartnerDoc, SAMPLE_DELIVERY_PARTNERS } from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface DeliveryViewProps {
@@ -335,19 +335,36 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 rounded-xl shadow-md transition-all text-xs"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 rounded-xl shadow-md transition-all text-xs cursor-pointer"
           >
             लॉग इन करें (Login)
           </button>
         </form>
 
+        <div className="mt-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl p-3 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5">
+            <Truck className="w-3.5 h-3.5 text-blue-600" />
+            टेस्ट राइडर: <span className="font-mono text-blue-950 font-extrabold">9876543210</span> (पासवर्ड: 12345)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthPhone('9876543210');
+              setAuthPassword('12345');
+            }}
+            className="text-[11px] font-extrabold text-blue-700 hover:text-blue-800 bg-blue-100/80 hover:bg-blue-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+          >
+            ऑटो-फिल
+          </button>
+        </div>
+
         {/* Delivery Self Registration CTA */}
-        <div className="mt-6 pt-5 border-t border-stone-200 text-center">
+        <div className="mt-5 pt-4 border-t border-stone-200 text-center">
           <p className="text-xs text-stone-600 mb-2 font-medium">नए डिलीवरी पार्टनर हैं? खुद से अकाउंट बनाएं:</p>
           <button
             type="button"
             onClick={() => setIsSelfRegisterOpen(true)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Truck className="w-4 h-4" />
             <span>🛵 नया डिलीवरी पार्टनर रजिस्टर करें (Self Registration)</span>

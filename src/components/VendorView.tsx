@@ -23,7 +23,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE, updateVendorPasswordDoc, updateVendorDoc } from '../services/db';
+import { MARKUP_RATE, ADMIN_COMMISSION_RATE, PARTNER_COMMISSION_RATE, updateVendorPasswordDoc, updateVendorDoc, SAMPLE_VENDORS } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
@@ -470,19 +470,36 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
           <button
             type="submit"
-            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-3 rounded-xl shadow-md transition-all text-xs"
+            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-3 rounded-xl shadow-md transition-all text-xs cursor-pointer"
           >
             लॉग इन करें (Login)
           </button>
         </form>
 
+        <div className="mt-4 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-3 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            टेस्ट वेंडर: <span className="font-mono text-emerald-900 font-extrabold">mahtab</span> (पासवर्ड: 12345)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthUsername('mahtab');
+              setAuthPassword('12345');
+            }}
+            className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+          >
+            ऑटो-फिल
+          </button>
+        </div>
+
         {/* Self Registration CTA Banner */}
-        <div className="mt-6 pt-5 border-t border-stone-200 text-center">
+        <div className="mt-5 pt-4 border-t border-stone-200 text-center">
           <p className="text-xs text-stone-600 mb-2 font-medium">नई दुकान है? खुद से रजिस्टर करें:</p>
           <button
             type="button"
             onClick={() => setIsSelfRegisterOpen(true)}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-stone-950 font-black py-2.5 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-2"
+            className="w-full bg-amber-500 hover:bg-amber-600 text-stone-950 font-black py-2.5 rounded-xl text-xs shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>🏪 अपनी नई दुकान रजिस्टर करें (Self Registration)</span>

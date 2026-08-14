@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { CustomerUser } from '../types';
 import { MadeInIndiaLogo } from './MadeInIndiaLogo';
-import { saveCustomerAccountDoc, getCustomerAccountByPhoneDoc } from '../services/db';
+import { saveCustomerAccountDoc, getCustomerAccountByPhoneDoc, SAMPLE_CUSTOMERS } from '../services/db';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -283,6 +283,25 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                 </button>
               </div>
             </form>
+
+            {/* Test demo credentials hint */}
+            <div className="bg-stone-50 border border-stone-200/90 rounded-2xl p-3 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                डेमो लॉगिन: <span className="font-mono text-stone-900 font-extrabold">9876510001</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhone('9876510001');
+                  setPassword('12345');
+                  setName('राहुल शर्मा');
+                }}
+                className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 bg-emerald-100/70 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                ऑटो-फिल करें
+              </button>
+            </div>
 
             <div className="border-t border-stone-100 pt-3 text-center">
               <p className="text-[11px] text-stone-500 font-medium">

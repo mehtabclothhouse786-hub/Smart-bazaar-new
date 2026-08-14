@@ -50,7 +50,7 @@ function setLocalData(key: string, value: any) {
   }
 }
 
-// Default Initial Vendors (1 Primary Account)
+// Default Initial Vendors (Primary Single Store)
 export const SAMPLE_VENDORS: Vendor[] = [
   {
     id: 'v1',
@@ -82,7 +82,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     category: 'कपड़े',
     vendorId: 'v1',
     vendorName: 'Mahtab Cloth House',
-    stock: 20,
+    stock: 25,
     unit: '1 Piece',
     deliveryMode: 'platform',
     imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&auto=format&fit=crop&q=80',
@@ -99,7 +99,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     category: 'कपड़े',
     vendorId: 'v1',
     vendorName: 'Mahtab Cloth House',
-    stock: 10,
+    stock: 15,
     unit: '1 Saree',
     deliveryMode: 'platform',
     imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=500&auto=format&fit=crop&q=80',
@@ -108,15 +108,16 @@ export const SAMPLE_PRODUCTS: Product[] = [
   }
 ];
 
+// Default Initial Delivery Partner
 export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [
   {
     id: 'dp1',
-    name: 'Rakesh Kumar',
+    name: 'Rakesh Kumar (राकेश कुमार)',
     phone: '9876543210',
     password: '12345',
-    vehicle: 'बाइक',
+    vehicle: 'बाइक (Hero Splendor)',
     status: 'Online',
-    currentLocation: 'Chandpur',
+    currentLocation: 'चांदपुर (Chandpur)',
     earnings: 450,
     walletBalance: 250,
     completedDeliveries: 12,
@@ -124,6 +125,24 @@ export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [
     securityQuestion: SECURITY_QUESTION,
     securityAnswer: 'chandpur'
   }
+];
+
+// Default Initial Customer Users
+export const SAMPLE_CUSTOMERS: CustomerUser[] = [
+  {
+    id: 'cust_9876510001',
+    name: 'राहुल शर्मा (Rahul Sharma)',
+    phone: '9876510001',
+    password: '12345',
+    address: 'मकान नं 42, गांधी नगर, चांदपुर (Chandpur)',
+    isLoggedIn: false,
+    createdAt: Date.now() - 86400000 * 10
+  }
+];
+
+// Default Initial Admin Accounts
+export const SAMPLE_ADMINS = [
+  { roleName: 'मुख्य सुपर एडमिन', username: 'admin', phone: '9457695918', password: '12345', desc: 'पूर्ण नियंत्रण एवं वित्तीय सेटलमेंट' }
 ];
 
 export const SAMPLE_OLD_ITEMS: OldItem[] = [
@@ -894,6 +913,16 @@ export async function updateServiceBookingBill(
 
 // --- CUSTOMER ACCOUNT MANAGEMENT ---
 
+export async function seedCustomers() {
+  try {
+    for (const c of SAMPLE_CUSTOMERS) {
+      await saveCustomerAccountDoc(c);
+    }
+  } catch (e) {
+    console.error('Error seeding customers:', e);
+  }
+}
+
 export async function saveCustomerAccountDoc(customer: CustomerUser): Promise<void> {
   const cleanPhone = customer.phone.replace(/\D/g, '');
   const docId = 'cust_' + cleanPhone;
@@ -933,7 +962,20 @@ export async function getCustomerAccountByPhoneDoc(phone: string): Promise<Custo
 
   // Fallback to local storage
   const allCustomers = getLocalData<Record<string, CustomerUser>>('customers_map', {});
-  return allCustomers[cleanPhone] || null;
+  if (allCustomers[cleanPhone]) {
+    return allCustomers[cleanPhone];
+  }
+
+  // Check pre-configured sample dummy customers
+  const sampleMatch = SAMPLE_CUSTOMERS.find(c => c.phone === cleanPhone);
+  if (sampleMatch) {
+    // Save to local storage for persistent session
+    allCustomers[cleanPhone] = sampleMatch;
+    setLocalData('customers_map', allCustomers);
+    return sampleMatch;
+  }
+
+  return null;
 }
 
 // --- OLD ITEMS (USED GOODS / SECOND HAND BAZAAR) ---
@@ -1039,6 +1081,27 @@ export async function deleteOldItemDoc(id: string): Promise<void> {
   }
 }
 
+// Master Factory Reset & Restore Function
+export async function restoreAllDefaults(): Promise<void> {
+  try {
+    // 1. Reset LocalStorage keys
+    setLocalData(PRODUCTS_COL, SAMPLE_PRODUCTS);
+    setLocalData(VENDORS_COL, SAMPLE_VENDORS);
+    setLocalData(DELIVERY_COL, SAMPLE_DELIVERY_PARTNERS);
+    setLocalData(SERVICES_COL, SAMPLE_SERVICES);
+    setLocalData(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    setLocalData(ORDERS_COL, []);
+    setLocalData(SERVICE_BOOKINGS_COL, []);
+    setLocalData('customers_map', {});
 
-
-
+    // 2. Reseed Firestore
+    await seedProducts();
+    await seedVendors();
+    await seedDeliveryPartners();
+    await seedServices();
+    await seedOldItems();
+    await seedCustomers();
+  } catch (e) {
+    console.error('Error restoring all defaults:', e);
+  }
+}
