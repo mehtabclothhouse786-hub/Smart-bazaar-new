@@ -72,12 +72,14 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
   // Delivery Partner Profile Edit State
   const [isEditRiderOpen, setIsEditRiderOpen] = useState(false);
   const [editRiderName, setEditRiderName] = useState('');
+  const [editRiderUsername, setEditRiderUsername] = useState('');
   const [editRiderPhone, setEditRiderPhone] = useState('');
   const [editRiderVehicle, setEditRiderVehicle] = useState('');
   const [editRiderLocation, setEditRiderLocation] = useState('');
 
   const handleOpenEditRider = () => {
     setEditRiderName(currentPartner.name || '');
+    setEditRiderUsername(currentPartner.username || '');
     setEditRiderPhone(currentPartner.phone || '');
     setEditRiderVehicle(currentPartner.vehicle || '');
     setEditRiderLocation(currentPartner.currentLocation || '');
@@ -92,6 +94,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     }
     await updateDeliveryPartnerDoc(currentPartner.id, {
       name: editRiderName.trim(),
+      username: editRiderUsername.trim(),
       phone: editRiderPhone.trim(),
       vehicle: editRiderVehicle.trim(),
       currentLocation: editRiderLocation.trim()
@@ -219,11 +222,13 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
       return;
     }
 
-    // Search strictly by exact phone number or exact name
+    // Search strictly by exact phone number, exact username, or exact name
     const matchedPartner = (deliveryPartners || []).find(dp => {
       const pPhone = (dp.phone || '').replace(/[^0-9]/g, '');
       const pName = (dp.name || '').toLowerCase();
+      const pUser = (dp.username || '').toLowerCase();
       return (
+        (pUser && pUser === cleanInput) ||
         (cleanDigits.length >= 10 && pPhone === cleanDigits) ||
         (pName && pName === cleanInput)
       );
@@ -687,10 +692,10 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
               setIsFirstTimeChangePass(false);
               setIsChangePassModalOpen(true);
             }}
-            className="text-xs font-bold text-amber-300 bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl border border-stone-700 transition-all flex items-center gap-1.5"
+            className="text-xs font-bold text-amber-300 bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl border border-stone-700 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-            <span>पासवर्ड बदलें</span>
+            <span>यूज़रनेम व पासवर्ड बदलें</span>
           </button>
 
           <button
@@ -1171,39 +1176,52 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
             </div>
 
             <form onSubmit={handleSaveRiderDetails} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">राइडर नाम (Full Name) *</label>
-                <input
-                  type="text"
-                  required
-                  value={editRiderName}
-                  onChange={e => setEditRiderName(e.target.value)}
-                  placeholder="राइडर का पूरा नाम"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">राइडर नाम (Full Name) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editRiderName}
+                    onChange={e => setEditRiderName(e.target.value)}
+                    placeholder="राइडर का पूरा नाम"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">लॉगिन यूज़रनेम (Username)</label>
+                  <input
+                    type="text"
+                    value={editRiderUsername}
+                    onChange={e => setEditRiderUsername(e.target.value)}
+                    placeholder="राइडर यूज़रनेम"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">मोबाइल नंबर (Phone Number) *</label>
-                <input
-                  type="tel"
-                  required
-                  value={editRiderPhone}
-                  onChange={e => setEditRiderPhone(e.target.value)}
-                  placeholder="10 अंकों का मोबाइल नंबर"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">वाहन प्रकार (Vehicle)</label>
-                <input
-                  type="text"
-                  value={editRiderVehicle}
-                  onChange={e => setEditRiderVehicle(e.target.value)}
-                  placeholder="उदा. बाइक / स्कूटी / ई-रिक्शा"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">मोबाइल नंबर (Phone Number) *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editRiderPhone}
+                    onChange={e => setEditRiderPhone(e.target.value)}
+                    placeholder="10 अंकों का मोबाइल नंबर"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">वाहन प्रकार (Vehicle)</label>
+                  <input
+                    type="text"
+                    value={editRiderVehicle}
+                    onChange={e => setEditRiderVehicle(e.target.value)}
+                    placeholder="उदा. बाइक / स्कूटी"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1237,17 +1255,22 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
         </div>
       )}
 
-      {/* Change Password Modal */}
+      {/* Change Password / Credentials Modal */}
       <ChangePasswordModal
         isOpen={isChangePassModalOpen}
         onClose={() => setIsChangePassModalOpen(false)}
         portalTitle="डिलीवरी राइडर पोर्टल (Rider Panel)"
-        currentUsername={currentPartner?.name || 'डिलीवरी राइडर'}
+        currentUsername={currentPartner?.username || currentPartner?.name || 'डिलीवरी राइडर'}
+        allowEditUsername={true}
         isFirstTime={isFirstTimeChangePass}
-        onSave={async (newPass) => {
+        onSave={async (newPass, newUser) => {
           if (currentPartner) {
-            await updatePartnerPasswordDoc(currentPartner.id, newPass);
-            currentPartner.password = newPass;
+            const updates: Partial<DeliveryPartner> = {};
+            if (newUser) updates.username = newUser;
+            if (newPass) updates.password = newPass;
+            await updateDeliveryPartnerDoc(currentPartner.id, updates);
+            if (newUser) currentPartner.username = newUser;
+            if (newPass) currentPartner.password = newPass;
           }
         }}
       />

@@ -102,6 +102,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [isEditShopModalOpen, setIsEditShopModalOpen] = useState(false);
   const [editShopName, setEditShopName] = useState('');
   const [editOwnerName, setEditOwnerName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -109,6 +110,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const handleOpenEditShop = () => {
     setEditShopName(currentVendor.shopName || '');
     setEditOwnerName(currentVendor.ownerName || '');
+    setEditUsername(currentVendor.username || '');
     setEditPhone(currentVendor.phone || '');
     setEditCategory(currentVendor.category || '');
     setEditAddress(currentVendor.address || '');
@@ -124,6 +126,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
     await updateVendorDoc(currentVendor.id, {
       shopName: editShopName.trim(),
       ownerName: editOwnerName.trim(),
+      username: editUsername.trim(),
       phone: editPhone.trim(),
       category: editCategory.trim(),
       address: editAddress.trim()
@@ -512,7 +515,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
                 setAuthUsername(e.target.value);
                 if (vendorAuthError) setVendorAuthError('');
               }}
-              placeholder="यूज़रनेम या 10-अंकीय मोबाइल नंबर"
+              placeholder="यूज़रनेम या मोबाइल नंबर दर्ज करें"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
@@ -874,10 +877,10 @@ export const VendorView: React.FC<VendorViewProps> = ({
               setIsFirstTimeChangePass(false);
               setIsChangePassModalOpen(true);
             }}
-            className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-2.5 rounded-xl border border-emerald-200 transition-all flex items-center gap-1.5"
+            className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-2.5 rounded-xl border border-emerald-200 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <KeyRound className="w-4 h-4 text-emerald-600" />
-            <span>पासवर्ड बदलें</span>
+            <span>यूज़रनेम व पासवर्ड बदलें</span>
           </button>
 
           <button
@@ -1583,15 +1586,28 @@ export const VendorView: React.FC<VendorViewProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
-                <input
-                  type="text"
-                  value={editCategory}
-                  onChange={e => setEditCategory(e.target.value)}
-                  placeholder="उदा. कपड़े / हार्डवेयर / किराना"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">लॉगिन यूज़रनेम (Username)</label>
+                  <input
+                    type="text"
+                    value={editUsername}
+                    onChange={e => setEditUsername(e.target.value)}
+                    placeholder="वेंडर लॉगिन यूज़रनेम"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
+                  <input
+                    type="text"
+                    value={editCategory}
+                    onChange={e => setEditCategory(e.target.value)}
+                    placeholder="उदा. कपड़े / हार्डवेयर / किराना"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1625,17 +1641,22 @@ export const VendorView: React.FC<VendorViewProps> = ({
         </div>
       )}
 
-      {/* Change Password Modal */}
+      {/* Change Password / Credentials Modal */}
       <ChangePasswordModal
         isOpen={isChangePassModalOpen}
         onClose={() => setIsChangePassModalOpen(false)}
         portalTitle="वेंडर पोर्टल (Vendor Panel)"
-        currentUsername={currentVendor?.shopName || 'वेंडर'}
+        currentUsername={currentVendor?.username || currentVendor?.shopName || 'वेंडर'}
+        allowEditUsername={true}
         isFirstTime={isFirstTimeChangePass}
-        onSave={async (newPass) => {
+        onSave={async (newPass, newUser) => {
           if (currentVendor) {
-            await updateVendorPasswordDoc(currentVendor.id, newPass);
-            currentVendor.password = newPass;
+            const updates: Partial<Vendor> = {};
+            if (newUser) updates.username = newUser;
+            if (newPass) updates.password = newPass;
+            await updateVendorDoc(currentVendor.id, updates);
+            if (newUser) currentVendor.username = newUser;
+            if (newPass) currentVendor.password = newPass;
           }
         }}
       />

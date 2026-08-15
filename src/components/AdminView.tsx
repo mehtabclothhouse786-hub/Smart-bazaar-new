@@ -96,6 +96,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [adminUsername, setAdminUsername] = useState<string>('');
   const [adminPassword, setAdminPassword] = useState<string>('');
   const [adminAuthError, setAdminAuthError] = useState<string>('');
+  const [savedAdminUsername, setSavedAdminUsername] = useState<string>(() => {
+    return localStorage.getItem('smart_bazaar_admin_username') || 'admin';
+  });
   const [savedAdminPassword, setSavedAdminPassword] = useState<string>(() => {
     return localStorage.getItem('smart_bazaar_admin_password') || '12345';
   });
@@ -241,7 +244,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       }
 
       // Populate into login form for instant convenient access
-      setAdminUsername('admin');
+      setAdminUsername(savedAdminUsername);
       setAdminPassword(cleanPass);
 
       setForgotSuccess(`✅ बधाई हो! एडमिन पासवर्ड सफलतापूर्वक रीसेट हो गया है!\nनया पासवर्ड: "${cleanPass}"`);
@@ -272,7 +275,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
-    const validAdminUsernames = ['admin', 'bazaar_admin', '9457695918', 'owner', 'superadmin'];
+    const validAdminUsernames = [
+      savedAdminUsername.toLowerCase(),
+      'admin',
+      'bazaar_admin',
+      '9457695918',
+      'owner',
+      'superadmin'
+    ];
     const isUserValid = validAdminUsernames.includes(u);
     
     // Strict password match: Only allow the exact saved password (or default '12345' if never changed)
@@ -479,6 +489,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       await updateVendorDoc(editingVendor.id, {
         shopName: editingVendor.shopName,
         ownerName: editingVendor.ownerName,
+        username: editingVendor.username,
         phone: editingVendor.phone,
         category: editingVendor.category,
         address: editingVendor.address,
@@ -500,6 +511,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     try {
       await updateDeliveryPartnerDoc(editingPartner.id, {
         name: editingPartner.name,
+        username: editingPartner.username,
         phone: editingPartner.phone,
         vehicle: editingPartner.vehicle,
         password: editingPartner.password,
@@ -1020,10 +1032,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
               setIsFirstTimeChangePass(false);
               setIsChangePassModalOpen(true);
             }}
-            className="bg-stone-800 hover:bg-stone-700 text-emerald-400 font-extrabold text-xs px-3.5 py-2.5 rounded-xl border border-stone-700 transition-all flex items-center gap-1.5"
+            className="bg-stone-800 hover:bg-stone-700 text-emerald-400 font-extrabold text-xs px-3.5 py-2.5 rounded-xl border border-stone-700 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
-            <span>पासवर्ड बदलें</span>
+            <span>यूज़रनेम व पासवर्ड बदलें</span>
           </button>
           <button
             onClick={() => setIsAdminLoggedIn(false)}
@@ -2155,23 +2167,36 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <label className="block font-bold text-stone-700 mb-1">लॉगिन यूज़रनेम (Username)</label>
+                  <input
+                    type="text"
+                    value={editingVendor.username || ''}
+                    onChange={e => setEditingVendor({ ...editingVendor, username: e.target.value })}
+                    placeholder="वेंडर यूज़रनेम (उदा: meena_fashion)"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
                   <label className="block font-bold text-stone-700 mb-1">श्रेणी (Category)</label>
                   <input
                     type="text"
                     value={editingVendor.category}
                     onChange={e => setEditingVendor({ ...editingVendor, category: e.target.value })}
+                    placeholder="उदा. कपड़े / किराना"
                     className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
-                <div>
-                  <label className="block font-bold text-stone-700 mb-1">पासवर्ड</label>
-                  <input
-                    type="text"
-                    value={editingVendor.password || ''}
-                    onChange={e => setEditingVendor({ ...editingVendor, password: e.target.value })}
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">पासवर्ड (Password)</label>
+                <input
+                  type="text"
+                  value={editingVendor.password || ''}
+                  onChange={e => setEditingVendor({ ...editingVendor, password: e.target.value })}
+                  placeholder="लॉगिन पासवर्ड"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
 
               <div>
@@ -2252,15 +2277,27 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             <form onSubmit={handleSavePartnerEdit} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-stone-700 mb-1">राइडर नाम (Full Name) *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingPartner.name}
-                  onChange={e => setEditingPartner({ ...editingPartner, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">राइडर नाम (Full Name) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingPartner.name}
+                    onChange={e => setEditingPartner({ ...editingPartner, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">लॉगिन यूज़रनेम (Username)</label>
+                  <input
+                    type="text"
+                    value={editingPartner.username || ''}
+                    onChange={e => setEditingPartner({ ...editingPartner, username: e.target.value })}
+                    placeholder="राइडर यूज़रनेम"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -2414,16 +2451,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
-      {/* Change Password Modal */}
+      {/* Change Password / Credentials Modal */}
       <ChangePasswordModal
         isOpen={isChangePassModalOpen}
         onClose={() => setIsChangePassModalOpen(false)}
         portalTitle="एडमिन पोर्टल (Admin Console)"
-        currentUsername={adminUsername || 'admin'}
+        currentUsername={savedAdminUsername}
+        allowEditUsername={true}
         isFirstTime={isFirstTimeChangePass}
-        onSave={(newPass) => {
-          localStorage.setItem('smart_bazaar_admin_password', newPass);
-          setSavedAdminPassword(newPass);
+        onSave={(newPass, newUser) => {
+          if (newUser) {
+            localStorage.setItem('smart_bazaar_admin_username', newUser);
+            setSavedAdminUsername(newUser);
+            setAdminUsername(newUser);
+          }
+          if (newPass) {
+            localStorage.setItem('smart_bazaar_admin_password', newPass);
+            setSavedAdminPassword(newPass);
+          }
         }}
       />
     </div>

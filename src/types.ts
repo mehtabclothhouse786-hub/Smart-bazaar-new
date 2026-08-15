@@ -96,6 +96,7 @@ export interface Vendor {
 export interface DeliveryPartner {
   id: string;
   name: string;
+  username?: string;
   phone: string;
   password?: string;
   email?: string;
