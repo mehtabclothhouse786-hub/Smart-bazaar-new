@@ -57,19 +57,20 @@ export const PredictiveSearchBar: React.FC<PredictiveSearchBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const query = searchQuery.trim().toLowerCase();
+  const query = (searchQuery || '').trim().toLowerCase();
 
   // 1. Predictive Match Analysis for Products (matching name, category, description, vendorName)
   const matchingProducts = useMemo(() => {
     if (!query) return [];
-    return products.filter(p => {
-      const nameMatch = p.name.toLowerCase().includes(query);
+    return (products || []).filter(p => {
+      if (!p) return false;
+      const nameMatch = (p.name || '').toLowerCase().includes(query);
       const catMatch = (p.category || '').toLowerCase().includes(query);
       const descMatch = (p.description || '').toLowerCase().includes(query) || (p.shortDescription || '').toLowerCase().includes(query);
       const vendorNameMatch = (p.vendorName || '').toLowerCase().includes(query);
       
       // Also match vendor category if vendor found
-      const vendor = vendors.find(v => v.id === p.vendorId || v.shopName === p.vendorName);
+      const vendor = (vendors || []).find(v => v && (v.id === p.vendorId || v.shopName === p.vendorName));
       const vendorCatMatch = (vendor?.category || '').toLowerCase().includes(query);
 
       return nameMatch || catMatch || descMatch || vendorNameMatch || vendorCatMatch;
@@ -81,32 +82,32 @@ export const PredictiveSearchBar: React.FC<PredictiveSearchBarProps> = ({
     // Unique list of all shop and product categories
     const categoriesSet = new Set<string>();
     ALL_SHOP_CATEGORIES.forEach(c => {
-      categoriesSet.add(c.hindiName);
-      categoriesSet.add(c.name);
+      if (c.hindiName) categoriesSet.add(c.hindiName);
+      if (c.name) categoriesSet.add(c.name);
     });
-    vendors.forEach(v => {
-      if (v.category) categoriesSet.add(v.category);
+    (vendors || []).forEach(v => {
+      if (v?.category) categoriesSet.add(v.category);
     });
-    products.forEach(p => {
-      if (p.category) categoriesSet.add(p.category);
+    (products || []).forEach(p => {
+      if (p?.category) categoriesSet.add(p.category);
     });
 
     const allCats = Array.from(categoriesSet);
     if (!query) {
       // Default top suggestions when focused with no query
       return allCats.slice(0, 5).map(catName => {
-        const prodCount = products.filter(p => (p.category || '').toLowerCase().includes(catName.toLowerCase())).length;
-        const vendorCount = vendors.filter(v => (v.category || '').toLowerCase().includes(catName.toLowerCase())).length;
+        const prodCount = (products || []).filter(p => p && (p.category || '').toLowerCase().includes((catName || '').toLowerCase())).length;
+        const vendorCount = (vendors || []).filter(v => v && (v.category || '').toLowerCase().includes((catName || '').toLowerCase())).length;
         return { name: catName, prodCount, vendorCount, matchesQuery: false };
       });
     }
 
     return allCats
-      .filter(cat => cat.toLowerCase().includes(query))
+      .filter(cat => (cat || '').toLowerCase().includes(query))
       .slice(0, 6)
       .map(catName => {
-        const prodCount = products.filter(p => (p.category || '').toLowerCase().includes(catName.toLowerCase())).length;
-        const vendorCount = vendors.filter(v => (v.category || '').toLowerCase().includes(catName.toLowerCase())).length;
+        const prodCount = (products || []).filter(p => p && (p.category || '').toLowerCase().includes((catName || '').toLowerCase())).length;
+        const vendorCount = (vendors || []).filter(v => v && (v.category || '').toLowerCase().includes((catName || '').toLowerCase())).length;
         return { name: catName, prodCount, vendorCount, matchesQuery: true };
       });
   }, [products, vendors, query]);
@@ -114,13 +115,15 @@ export const PredictiveSearchBar: React.FC<PredictiveSearchBarProps> = ({
   // 3. Predictive Match Analysis for Vendors / Stores
   const matchingVendors = useMemo(() => {
     if (!query) return [];
-    return vendors.filter(v => {
-      const nameMatch = v.shopName.toLowerCase().includes(query);
+    return (vendors || []).filter(v => {
+      if (!v) return false;
+      const nameMatch = (v.shopName || '').toLowerCase().includes(query);
       const catMatch = (v.category || '').toLowerCase().includes(query);
       const addressMatch = (v.address || '').toLowerCase().includes(query);
-      const hasProdMatch = products.some(p => 
+      const hasProdMatch = (products || []).some(p => 
+        p &&
         (p.vendorId === v.id || p.vendorName === v.shopName) && 
-        (p.name.toLowerCase().includes(query) || (p.category || '').toLowerCase().includes(query))
+        ((p.name || '').toLowerCase().includes(query) || (p.category || '').toLowerCase().includes(query))
       );
       return nameMatch || catMatch || addressMatch || hasProdMatch;
     }).slice(0, 4);

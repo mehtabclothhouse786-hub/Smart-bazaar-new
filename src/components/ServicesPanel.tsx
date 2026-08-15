@@ -62,7 +62,7 @@ const CATEGORIES = [
 ];
 
 export const getServiceCategoryBadge = (category: string = '') => {
-  const cat = category.toLowerCase();
+  const cat = (category || '').toLowerCase();
   if (cat.includes('इलेक्ट्रिशियन') || cat.includes('electrician') || cat.includes('बिजली') || cat.includes('ac')) {
     return { icon: Zap, bg: 'bg-amber-100 border-amber-300 text-amber-800' };
   }
@@ -194,14 +194,14 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
 ==============================
 धन्यवाद! स्मार्ट बाजार सर्विसेज (Made in India)`;
 
-    const cleanPhone = lead.customerPhone.replace(/[^0-9]/g, '');
+    const cleanPhone = (lead.customerPhone || '').replace(/[^0-9]/g, '');
     const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
   // Filter Services
   const filteredServices = services.filter(s => {
-    const query = searchQuery.toLowerCase().trim();
+    const query = (searchQuery || '').toLowerCase().trim();
     const matchesCategory = selectedCategory === 'सभी' || s.category === selectedCategory;
 
     if (!query) return matchesCategory;

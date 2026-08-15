@@ -217,8 +217,8 @@ export const OldItemsPanel: React.FC<OldItemsPanelProps> = ({
       return false;
     }
     // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
+    if ((searchQuery || '').trim()) {
+      const q = (searchQuery || '').toLowerCase().trim();
       const matchTitle = item.title?.toLowerCase().includes(q);
       const matchDesc = item.description?.toLowerCase().includes(q);
       const matchLoc = item.location?.toLowerCase().includes(q);

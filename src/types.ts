@@ -68,6 +68,7 @@ export interface Order {
   deliveryPartnerName?: string;
   adminCommission?: number;
   partnerCommission?: number;
+  deliveryCommission?: number;
   codCollected?: boolean;
   settlementStatus?: string;
   createdAt: number;
@@ -127,9 +128,15 @@ export interface ServiceProvider {
   primaryPhone: string; // 10 अंकों का प्राथमिक कॉल नंबर (e.g. 9876543210)
   whatsappPhone?: string; // WhatsApp नंबर (optional)
   address?: string; // क्षेत्र / स्थान (e.g. Bijnor / Chandpur)
+  location?: string;
   rating?: number; // स्टार रेटिंग
   experienceYears?: number; // अनुभव (साल)
   imageUrl?: string;
+  visitCharge?: number;
+  username?: string;
+  password?: string;
+  securityQuestion?: string;
+  securityAnswer?: string;
   createdAt?: number;
 }
 
@@ -142,10 +149,13 @@ export interface ServiceBooking {
   customerPhone: string; // 10 अंकों का ग्राहक मोबाइल नंबर (saved to system)
   customerName?: string;
   address?: string;
+  customerAddress?: string;
+  serviceCategory?: string;
   notes?: string;
   status: 'Booked / Contacted' | 'Completed' | 'Cancelled';
   createdAt: number;
   visitFee?: number; // Per call fee (Fixed ₹100)
+  visitCharge?: number;
   materialCost?: number; // सामान/पार्ट्स खर्च (Fill by Provider)
   subtotal?: number; // visitFee + materialCost
   platformFee?: number; // 10% platform charge

@@ -358,8 +358,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               {/* Predictive Search Bar with Auto-complete & Real-time Suggestions */}
               <div className="mb-5">
                 <PredictiveSearchBar
-                  value={shopSearchQuery}
-                  onChange={setShopSearchQuery}
+                  searchQuery={shopSearchQuery}
+                  onSearchChange={setShopSearchQuery}
                   products={products}
                   vendors={vendors}
                   onSelectProduct={(product) => {
@@ -372,8 +372,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                   onSelectCategory={(category) => {
                     setSelectedShopCategory(category);
                   }}
-                  onSelectVendor={(vendor) => {
-                    setSelectedVendorId(vendor.id);
+                  onSelectVendor={(vendorId) => {
+                    setSelectedVendorId(vendorId);
                     setCustomerShopView('catalog');
                   }}
                   onAddToCart={(product) => {
@@ -467,20 +467,21 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
 
               {/* LIVE MATCHED PRODUCTS WHEN SEARCHING */}
               {(() => {
-                const q = shopSearchQuery.trim().toLowerCase();
+                const q = (shopSearchQuery || '').trim().toLowerCase();
                 if (!q) return null;
 
                 const liveMatchedProducts = products.filter(p => {
+                  if (!p) return false;
                   // Category filter if active
                   if (selectedShopCategory !== 'सभी') {
-                    const selCat = selectedShopCategory.toLowerCase();
+                    const selCat = (selectedShopCategory || '').toLowerCase();
                     const pCat = (p.category || '').toLowerCase();
                     const vendor = vendors.find(v => v.id === p.vendorId || v.shopName === p.vendorName);
                     const vCat = (vendor?.category || '').toLowerCase();
                     if (!pCat.includes(selCat) && !vCat.includes(selCat)) return false;
                   }
 
-                  const nameMatch = p.name.toLowerCase().includes(q);
+                  const nameMatch = (p.name || '').toLowerCase().includes(q);
                   const catMatch = (p.category || '').toLowerCase().includes(q);
                   const descMatch = (p.description || '').toLowerCase().includes(q) || (p.shortDescription || '').toLowerCase().includes(q);
                   const vNameMatch = (p.vendorName || '').toLowerCase().includes(q);
@@ -611,46 +612,48 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 <h2 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
                   <span className="w-1.5 h-5 bg-emerald-600 rounded-full inline-block" />
                   <span>उपलब्ध दुकानें ({vendors.filter(v => {
-                    const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
+                    if (!v) return false;
+                    const vProducts = products.filter(p => p && (p.vendorId === v.id || p.vendorName === v.shopName));
                     
                     // Category Chip Filter
                     if (selectedShopCategory !== 'सभी') {
-                      const selCat = selectedShopCategory.toLowerCase();
+                      const selCat = (selectedShopCategory || '').toLowerCase();
                       const vCat = (v.category || '').toLowerCase();
                       const hasProdCat = vProducts.some(p => (p.category || '').toLowerCase().includes(selCat));
                       if (!vCat.includes(selCat) && !hasProdCat) return false;
                     }
 
                     // Search Query Filter
-                    if (!shopSearchQuery.trim()) return true;
-                    const q = shopSearchQuery.toLowerCase().trim();
-                    return v.shopName.toLowerCase().includes(q) ||
+                    if (!(shopSearchQuery || '').trim()) return true;
+                    const q = (shopSearchQuery || '').toLowerCase().trim();
+                    return (v.shopName || '').toLowerCase().includes(q) ||
                            (v.address && v.address.toLowerCase().includes(q)) ||
                            (v.category && v.category.toLowerCase().includes(q)) ||
-                           vProducts.some(p => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
+                           vProducts.some(p => (p.name || '').toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
                   }).length})</span>
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {vendors.filter(v => {
-                  const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
+                  if (!v) return false;
+                  const vProducts = products.filter(p => p && (p.vendorId === v.id || p.vendorName === v.shopName));
                   
                   // Category Chip Filter
                   if (selectedShopCategory !== 'सभी') {
-                    const selCat = selectedShopCategory.toLowerCase();
+                    const selCat = (selectedShopCategory || '').toLowerCase();
                     const vCat = (v.category || '').toLowerCase();
                     const hasProdCat = vProducts.some(p => (p.category || '').toLowerCase().includes(selCat));
                     if (!vCat.includes(selCat) && !hasProdCat) return false;
                   }
 
                   // Search Query Filter
-                  if (!shopSearchQuery.trim()) return true;
-                  const q = shopSearchQuery.toLowerCase().trim();
-                  return v.shopName.toLowerCase().includes(q) ||
+                  if (!(shopSearchQuery || '').trim()) return true;
+                  const q = (shopSearchQuery || '').toLowerCase().trim();
+                  return (v.shopName || '').toLowerCase().includes(q) ||
                          (v.address && v.address.toLowerCase().includes(q)) ||
                          (v.category && v.category.toLowerCase().includes(q)) ||
-                         vProducts.some(p => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
+                         vProducts.some(p => (p.name || '').toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
                 }).map(v => {
                   const vProducts = products.filter(p => p.vendorId === v.id || p.vendorName === v.shopName);
                   const categories = Array.from(new Set(vProducts.map(p => p.category)));
@@ -753,9 +756,9 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               {/* Single Vendor Catalog Search Bar */}
               <div className="mb-5">
                 <PredictiveSearchBar
-                  value={shopSearchQuery}
-                  onChange={setShopSearchQuery}
-                  products={products.filter(p => p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName)}
+                  searchQuery={shopSearchQuery}
+                  onSearchChange={setShopSearchQuery}
+                  products={products.filter(p => p && (p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName))}
                   vendors={selectedVendor ? [selectedVendor] : []}
                   onSelectProduct={(product) => {
                     // product is in current vendor
@@ -770,11 +773,11 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               {/* Products in this vendor's catalog */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {products
-                  .filter(p => p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName)
+                  .filter(p => p && (p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName))
                   .filter(p => {
-                    if (!shopSearchQuery.trim()) return true;
-                    const q = shopSearchQuery.toLowerCase().trim();
-                    return p.name.toLowerCase().includes(q) ||
+                    if (!(shopSearchQuery || '').trim()) return true;
+                    const q = (shopSearchQuery || '').toLowerCase().trim();
+                    return (p.name || '').toLowerCase().includes(q) ||
                            (p.category && p.category.toLowerCase().includes(q)) ||
                            (p.description && p.description.toLowerCase().includes(q)) ||
                            (p.shortDescription && p.shortDescription.toLowerCase().includes(q));

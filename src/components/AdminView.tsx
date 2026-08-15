@@ -395,7 +395,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const activeOrdersCount = (orders || []).filter(o => o?.status !== 'Delivered' && o?.status !== 'Cancelled').length;
 
   const filteredOrders = (orders || []).filter(o => {
-    const q = orderSearch.toLowerCase();
+    const q = (orderSearch || '').toLowerCase();
     return !q || 
       (o?.id || '').toLowerCase().includes(q) || 
       (o?.customerName || '').toLowerCase().includes(q) ||
