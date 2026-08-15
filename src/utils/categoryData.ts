@@ -26,7 +26,7 @@ export const ALL_SHOP_CATEGORIES: CategoryInfo[] = [
     ],
     gradient: 'from-amber-600 to-rose-700',
     iconBg: 'bg-amber-50 text-amber-800 border-amber-200',
-    keywords: ['cloth', 'clothing', 'कपड़े', 'साड़ी', 'कुर्ता', 'सूट', 'fashion', 'garments', 'textile', 'boutique', 'kamal', 'mahtab']
+    keywords: ['cloth', 'clothing', 'कपड़े', 'साड़ी', 'कुर्ता', 'सूट', 'fashion', 'garments', 'textile', 'boutique', 'kamal']
   },
   {
     id: 'hardware',
@@ -170,7 +170,7 @@ export const ALL_SHOP_CATEGORIES: CategoryInfo[] = [
 
 // Curated shop photo options for vendors & admin
 export const CURATED_SHOP_PHOTOS = [
-  { name: 'कपड़ा शोरूम / बुटीक (Mahtab)', category: 'कपड़े', url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&auto=format&fit=crop&q=80' },
+  { name: 'कपड़ा शोरूम / बुटीक (Fashion Boutique)', category: 'कपड़े', url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&auto=format&fit=crop&q=80' },
   { name: 'पारंपरिक वस्त्र व साड़ियां (Kamal)', category: 'कपड़े', url: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&auto=format&fit=crop&q=80' },
   { name: 'डिजाइनर वियर स्टोर', category: 'कपड़े', url: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600&auto=format&fit=crop&q=80' },
   { name: 'हार्डवेयर व टूल्स स्टोर', category: 'हार्डवेयर', url: 'https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=600&auto=format&fit=crop&q=80' },
@@ -232,9 +232,6 @@ export function getCategoryPhoto(
   // Explicit shop name overrides for distinctness
   if (sName.includes('kamal')) {
     return 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&auto=format&fit=crop&q=80'; // Saree & Bridal shop
-  }
-  if (sName.includes('mahtab')) {
-    return 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&auto=format&fit=crop&q=80'; // Boutique showroom
   }
 
   // Find matching category

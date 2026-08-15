@@ -164,7 +164,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
         'bazaar_admin',
         'smartbazaar',
         'smart_bazaar',
-        'mehtab',
         'bijnor',
         'express',
         'admin',
@@ -172,8 +171,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         'kapda',
         'cloth',
         '786786',
-        '9457695918',
-        'mehtabclothhouse786@gmail.com'
+        '9457695918'
       ];
 
       if (validAnswers.includes(input)) {
@@ -274,7 +272,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
-    const validAdminUsernames = ['admin', 'mehtab', 'mehtabclothhouse786@gmail.com', '9457695918', 'bazaar_admin'];
+    const validAdminUsernames = ['admin', 'bazaar_admin', '9457695918', 'owner', 'superadmin'];
     const isUserValid = validAdminUsernames.includes(u);
     
     // Strict password match: Only allow the exact saved password (or default '12345' if never changed)
@@ -1666,7 +1664,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   required
                   value={vShopName}
                   onChange={e => setVShopName(e.target.value)}
-                  placeholder="उदा. महताब क्लॉथ हाउस"
+                  placeholder="उदा. रॉयल वस्त्र भंडार"
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -1678,7 +1676,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     type="text"
                     value={vOwnerName}
                     onChange={e => setVOwnerName(e.target.value)}
-                    placeholder="उदा. महताब खान"
+                    placeholder="उदा. राहुल शर्मा"
                     className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl outline-none font-semibold focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
