@@ -21,7 +21,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   allowEditUsername = true,
   onSave
 }) => {
-  const [username, setUsername] = useState(currentUsername);
+  const [username, setUsername] = useState(currentUsername || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,7 +31,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setUsername(currentUsername);
+      setUsername(currentUsername || '');
       setNewPassword('');
       setConfirmPassword('');
       setErrorMsg('');
@@ -46,9 +46,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setErrorMsg('');
     setSuccessMsg('');
 
-    const cleanUser = username.trim();
-    const cleanPass = newPassword.trim();
-    const cleanConfirm = confirmPassword.trim();
+    const cleanUser = (username || '').trim();
+    const cleanPass = (newPassword || '').trim();
+    const cleanConfirm = (confirmPassword || '').trim();
 
     if (allowEditUsername && !cleanUser) {
       setErrorMsg('कृपया वैध यूज़रनेम दर्ज करें।');

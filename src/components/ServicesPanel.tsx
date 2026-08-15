@@ -271,8 +271,8 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
         createdAt: Date.now()
       });
 
-      const providerPhone = selectedService.primaryPhone.trim().replace(/[^0-9]/g, '');
-      const whatsappPhone = (selectedService.whatsappPhone || selectedService.primaryPhone).trim().replace(/[^0-9]/g, '');
+      const providerPhone = (selectedService.primaryPhone || '').trim().replace(/[^0-9]/g, '');
+      const whatsappPhone = (selectedService.whatsappPhone || selectedService.primaryPhone || '').trim().replace(/[^0-9]/g, '');
 
       setCreatedBookingSuccess({
         id: newBookingId || 'SBK' + Math.floor(100000 + Math.random() * 900000),
@@ -304,7 +304,7 @@ export const ServicesPanel: React.FC<ServicesPanelProps> = ({
       setCustomerAddress('');
     } catch (err) {
       console.error('Error recording service booking:', err);
-      const providerPhone = selectedService.primaryPhone.trim().replace(/[^0-9]/g, '');
+      const providerPhone = (selectedService?.primaryPhone || '').trim().replace(/[^0-9]/g, '');
       try {
         window.location.href = `tel:+91${providerPhone}`;
       } catch (e) {

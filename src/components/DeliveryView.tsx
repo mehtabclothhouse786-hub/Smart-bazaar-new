@@ -88,16 +88,16 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
   const handleSaveRiderDetails = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editRiderName.trim() || !editRiderPhone.trim()) {
+    if (!(editRiderName || '').trim() || !(editRiderPhone || '').trim()) {
       alert('कृपया नाम और फ़ोन नंबर दर्ज करें!');
       return;
     }
     await updateDeliveryPartnerDoc(currentPartner.id, {
-      name: editRiderName.trim(),
-      username: editRiderUsername.trim(),
-      phone: editRiderPhone.trim(),
-      vehicle: editRiderVehicle.trim(),
-      currentLocation: editRiderLocation.trim()
+      name: (editRiderName || '').trim(),
+      username: (editRiderUsername || '').trim(),
+      phone: (editRiderPhone || '').trim(),
+      vehicle: (editRiderVehicle || '').trim(),
+      currentLocation: (editRiderLocation || '').trim()
     });
     alert('✅ आपकी राइडर प्रोफ़ाइल जानकारी अपडेट हो गई है!');
     setIsEditRiderOpen(false);
@@ -105,7 +105,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
   const handleSelfRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regName.trim() || !regPhone.trim()) {
+    if (!(regName || '').trim() || !(regPhone || '').trim()) {
       alert('कृपया अपना नाम और मोबाइल नंबर दर्ज करें!');
       return;
     }
@@ -117,8 +117,8 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     setIsSubmittingReg(true);
     try {
       const createdId = await onAddDeliveryPartner({
-        name: regName.trim(),
-        phone: regPhone.trim(),
+        name: (regName || '').trim(),
+        phone: (regPhone || '').trim(),
         vehicle: regVehicle,
         status: 'Online',
         currentLocation: 'बिजनौर मार्केट',
@@ -126,9 +126,9 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
         walletBalance: 0,
         completedDeliveries: 0,
         rating: 5.0,
-        password: regPassword.trim() || '123',
+        password: (regPassword || '').trim() || '123',
         securityQuestion: 'आपका सुरक्षा शब्द क्या है?',
-        securityAnswer: regSecAnswer.trim().toLowerCase() || 'express'
+        securityAnswer: (regSecAnswer || '').trim().toLowerCase() || 'express'
       });
 
       alert(`🎉 बधाई हो! राइडर "${regName}" का रजिस्ट्रेशन सफल रहा।\nआप अब ऑनलाइन हैं और ऑर्डर स्वीकार कर सकते हैं!`);

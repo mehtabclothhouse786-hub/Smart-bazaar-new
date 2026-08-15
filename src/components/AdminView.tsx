@@ -439,11 +439,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
         status: 'active',
         rating: 4.8,
         totalOrders: 0,
-        imageUrl: vImageUrl.trim() || getCategoryPhoto(finalVCat, vShopName),
-        username: vUsername.trim().toLowerCase() || vShopName.toLowerCase().replace(/\s+/g, ''),
-        password: vPassword.trim() || '123',
+        imageUrl: (vImageUrl || '').trim() || getCategoryPhoto(finalVCat, vShopName || ''),
+        username: (vUsername || '').trim().toLowerCase() || (vShopName || '').toLowerCase().replace(/\s+/g, ''),
+        password: (vPassword || '').trim() || '123',
         securityQuestion: 'आपका सुरक्षा शब्द (Security Word) क्या है?',
-        securityAnswer: vSecAnswer.trim().toLowerCase() || 'express'
+        securityAnswer: (vSecAnswer || '').trim().toLowerCase() || 'express'
       });
 
       alert(`✅ नई दुकान "${vShopName}" सफलतापूर्वक जोड़ दी गई है!`);

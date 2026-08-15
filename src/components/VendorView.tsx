@@ -119,17 +119,17 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
   const handleSaveShopDetails = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editShopName.trim() || !editPhone.trim()) {
+    if (!(editShopName || '').trim() || !(editPhone || '').trim()) {
       alert('कृपया दुकान का नाम और फ़ोन नंबर दर्ज करें!');
       return;
     }
     await updateVendorDoc(currentVendor.id, {
-      shopName: editShopName.trim(),
-      ownerName: editOwnerName.trim(),
-      username: editUsername.trim(),
-      phone: editPhone.trim(),
-      category: editCategory.trim(),
-      address: editAddress.trim()
+      shopName: (editShopName || '').trim(),
+      ownerName: (editOwnerName || '').trim(),
+      username: (editUsername || '').trim(),
+      phone: (editPhone || '').trim(),
+      category: (editCategory || '').trim(),
+      address: (editAddress || '').trim()
     });
     alert('✅ आपकी दुकान की जानकारी सफलतापूर्वक अपडेट कर दी गई है!');
     setIsEditShopModalOpen(false);
@@ -137,7 +137,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
   const handleSelfRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regShopName.trim() || !regPhone.trim()) {
+    if (!(regShopName || '').trim() || !(regPhone || '').trim()) {
       alert('कृपया दुकान का नाम और मोबाइल नंबर दर्ज करें!');
       return;
     }
@@ -148,21 +148,21 @@ export const VendorView: React.FC<VendorViewProps> = ({
 
     setIsSubmittingReg(true);
     try {
-      const finalCategory = isCustomRegCategory ? (customRegCategory.trim() || 'General Store') : regCategory;
+      const finalCategory = isCustomRegCategory ? ((customRegCategory || '').trim() || 'General Store') : regCategory;
       const createdId = await onAddVendor({
-        shopName: regShopName.trim(),
-        ownerName: regOwnerName.trim() || regShopName.trim(),
-        phone: regPhone.trim(),
+        shopName: (regShopName || '').trim(),
+        ownerName: (regOwnerName || '').trim() || (regShopName || '').trim(),
+        phone: (regPhone || '').trim(),
         category: finalCategory,
-        address: regAddress.trim() || 'बिजनौर मार्केट',
+        address: (regAddress || '').trim() || 'बिजनौर मार्केट',
         status: 'active',
         rating: 5.0,
         totalOrders: 0,
-        imageUrl: getCategoryPhoto(finalCategory, regShopName.trim()),
-        username: regUsername.trim().toLowerCase() || regShopName.trim().toLowerCase().replace(/\s+/g, ''),
-        password: regPassword.trim() || '123',
+        imageUrl: getCategoryPhoto(finalCategory, (regShopName || '').trim()),
+        username: (regUsername || '').trim().toLowerCase() || (regShopName || '').trim().toLowerCase().replace(/\s+/g, ''),
+        password: (regPassword || '').trim() || '123',
         securityQuestion: 'आपका सुरक्षा शब्द क्या है?',
-        securityAnswer: regSecAnswer.trim().toLowerCase() || 'express'
+        securityAnswer: (regSecAnswer || '').trim().toLowerCase() || 'express'
       });
 
       alert(`🎉 बधाई हो! आपकी दुकान "${regShopName}" का रजिस्ट्रेशन सफल रहा।\nआप अब अपने पोर्टल में प्रवेश कर चुके हैं।`);

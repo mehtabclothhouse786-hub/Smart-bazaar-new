@@ -900,7 +900,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
               const cleanCustomerPhone = (customerUser.phone || '').replace(/\D/g, '').slice(-10);
               const cleanOrderPhone = (o.customerPhone || '').replace(/\D/g, '').slice(-10);
               const phoneMatch = Boolean(cleanCustomerPhone && cleanOrderPhone && cleanCustomerPhone === cleanOrderPhone);
-              const nameMatch = Boolean(o.customerName && customerUser.name && o.customerName.trim().toLowerCase() === customerUser.name.trim().toLowerCase());
+              const nameMatch = Boolean(o.customerName && customerUser.name && String(o.customerName).trim().toLowerCase() === String(customerUser.name).trim().toLowerCase());
               return phoneMatch || nameMatch;
             });
 
