@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { CustomerUser } from '../types';
 import { MadeInIndiaLogo } from './MadeInIndiaLogo';
-import { saveCustomerAccountDoc, getCustomerAccountByPhoneDoc, SAMPLE_CUSTOMERS } from '../services/db';
+import { saveCustomerAccountDoc, getCustomerAccountByPhoneDoc } from '../services/db';
 
 interface CustomerAuthModalProps {
   isOpen: boolean;
@@ -29,19 +29,22 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
   onLoginSuccess,
   pendingActionText = 'खरीदारी और अपने ऑर्डर देखने के लिए लॉगिन करें'
 }) => {
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [newResetPassword, setNewResetPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   if (!isOpen) return null;
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
     
     const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
     const cleanName = name.trim();
@@ -49,6 +52,44 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
 
     if (cleanPhone.length !== 10) {
       setErrorMessage('कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें। (उदा: 9876543210)');
+      return;
+    }
+
+    if (authMode === 'forgot') {
+      const cleanNewPass = newResetPassword.trim();
+      if (!cleanNewPass || cleanNewPass.length < 4) {
+        setErrorMessage('कृपया कम से कम 4 अक्षरों का नया पासवर्ड दर्ज करें।');
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const existingAcc = await getCustomerAccountByPhoneDoc(cleanPhone);
+        if (!existingAcc) {
+          setErrorMessage('यह मोबाइल नंबर रजिस्टर्ड नहीं है। कृपया "नया खाता" बनाएं।');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const updatedUser: CustomerUser = {
+          ...existingAcc,
+          password: cleanNewPass,
+          isLoggedIn: true
+        };
+
+        await saveCustomerAccountDoc(updatedUser);
+        setSuccessMessage('✅ पासवर्ड सफलतापूर्वक रीसेट हो गया है! अब लॉगिन करें।');
+        setPassword(cleanNewPass);
+        setIsSubmitting(false);
+        setTimeout(() => {
+          setAuthMode('login');
+          setSuccessMessage('');
+        }, 1800);
+      } catch (err) {
+        console.error('Password reset error:', err);
+        setErrorMessage('पासवर्ड रीसेट करने में त्रुटि हुई।');
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -90,22 +131,22 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
         onLoginSuccess(newUser);
         onClose();
       } else {
-        // Login Mode
+        // Login Mode - Strict Password Matching
         const existingAcc = await getCustomerAccountByPhoneDoc(cleanPhone);
 
         if (!existingAcc) {
-          setErrorMessage('यह मोबाइल नंबर रजिस्टर्ड नहीं है। कृपया "नया खाता बनाएं" चुनें!');
+          setErrorMessage('❌ यह मोबाइल नंबर रजिस्टर्ड नहीं है। कृपया "नया खाता" बनाएं!');
           setIsSubmitting(false);
           return;
         }
 
-        if (existingAcc.password && existingAcc.password !== cleanPassword) {
-          setErrorMessage('गलत पासवर्ड! कृपया सही पासवर्ड दर्ज करें।');
+        const savedPass = existingAcc.password || '12345';
+        if (cleanPassword !== savedPass) {
+          setErrorMessage('❌ गलत पासवर्ड! कृपया अपने खाते का सही पासवर्ड दर्ज करें या "पासवर्ड भूल गए?" विकल्प का उपयोग करें।');
           setIsSubmitting(false);
           return;
         }
 
-        // Update password if existing user didn't have one
         const loggedInUser: CustomerUser = {
           ...existingAcc,
           name: existingAcc.name || cleanName || 'Customer',
@@ -215,7 +256,7 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="उदा: राहुल शर्मा / Mahtab"
+                      placeholder="उदा: आपका पूरा नाम (जैसे राहुल शर्मा)"
                       className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 focus:border-emerald-600 focus:bg-white rounded-2xl outline-none font-bold text-stone-900 text-sm transition-all"
                     />
                   </div>
@@ -243,31 +284,81 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-extrabold text-stone-700 mb-1.5">
-                  {authMode === 'register' ? 'पासवर्ड बनाएं (Create Password)' : 'पासवर्ड (Password)'} <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-3 bg-stone-50 border border-stone-200 focus:border-emerald-600 focus:bg-white rounded-2xl outline-none font-bold text-stone-900 text-sm transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              {authMode !== 'forgot' && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-extrabold text-stone-700">
+                      {authMode === 'register' ? 'पासवर्ड बनाएं (Create Password)' : 'पासवर्ड (Password)'} <span className="text-rose-500">*</span>
+                    </label>
+                    {authMode === 'login' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode('forgot');
+                          setErrorMessage('');
+                          setSuccessMessage('');
+                        }}
+                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline"
+                      >
+                        पासवर्ड भूल गए?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-3 bg-stone-50 border border-stone-200 focus:border-emerald-600 focus:bg-white rounded-2xl outline-none font-bold text-stone-900 text-sm transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="pt-2">
+              {authMode === 'forgot' && (
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-700 mb-1.5">
+                    नया गुप्त पासवर्ड बनाएं (New Password) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={newResetPassword}
+                      onChange={(e) => setNewResetPassword(e.target.value)}
+                      placeholder="नया 4+ अंकों का पासवर्ड"
+                      className="w-full pl-10 pr-10 py-3 bg-stone-50 border border-stone-200 focus:border-emerald-600 focus:bg-white rounded-2xl outline-none font-bold text-stone-900 text-sm transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold p-3 rounded-2xl flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{successMessage}</span>
+                </div>
+              )}
+
+              <div className="pt-2 flex flex-col gap-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -277,31 +368,30 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                   <span>
                     {isSubmitting 
                       ? 'प्रोसेस हो रहा है...' 
-                      : authMode === 'login' ? 'सुरक्षित लॉगिन करें' : 'खाता बनाएं एवं लॉगिन करें'
+                      : authMode === 'login' 
+                        ? 'सुरक्षित लॉगिन करें' 
+                        : authMode === 'register'
+                          ? 'खाता बनाएं एवं लॉगिन करें'
+                          : 'नया पासवर्ड रीसेट व सेव करें'
                     }
                   </span>
                 </button>
+
+                {authMode === 'forgot' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('login');
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                    }}
+                    className="w-full py-2.5 text-xs font-extrabold text-stone-600 hover:text-stone-900"
+                  >
+                    ← वापस लॉगिन पर जाएं
+                  </button>
+                )}
               </div>
             </form>
-
-            {/* Test demo credentials hint */}
-            <div className="bg-stone-50 border border-stone-200/90 rounded-2xl p-3 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                डेमो लॉगिन: <span className="font-mono text-stone-900 font-extrabold">9876510001</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setPhone('9876510001');
-                  setPassword('12345');
-                  setName('राहुल शर्मा');
-                }}
-                className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 bg-emerald-100/70 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-              >
-                ऑटो-फिल करें
-              </button>
-            </div>
 
             <div className="border-t border-stone-100 pt-3 text-center">
               <p className="text-[11px] text-stone-500 font-medium">

@@ -51,198 +51,23 @@ function setLocalData(key: string, value: any) {
   }
 }
 
-// Default Initial Vendors (Primary Single Store)
-export const SAMPLE_VENDORS: Vendor[] = [
-  {
-    id: 'v1',
-    shopName: 'Mahtab Cloth House',
-    ownerName: 'Mahtab Ahmed',
-    username: 'mahtab',
-    password: '12345',
-    phone: '9876500001',
-    category: 'कपड़े (Clothing)',
-    status: 'active',
-    address: 'Main Bazaar, Chandpur',
-    rating: 4.9,
-    totalOrders: 184,
-    imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500&auto=format&fit=crop&q=80',
-    securityQuestion: SECURITY_QUESTION,
-    securityAnswer: 'kapda'
-  }
-];
+// Default Initial Vendors - Purged (No dummy accounts)
+export const SAMPLE_VENDORS: Vendor[] = [];
 
-// Default Initial Products with Cost Price (Vendor Rate) and Customer Price (+25%)
-export const SAMPLE_PRODUCTS: Product[] = [
-  {
-    id: 'p1',
-    name: 'कॉटन कुर्ता (पुरुष)',
-    shortDescription: '100% शुद्ध कॉटन, आरामदायक फिटिंग',
-    costPrice: 399,
-    price: 499, // 399 * 1.25 = ~499
-    originalPrice: 699,
-    category: 'कपड़े',
-    vendorId: 'v1',
-    vendorName: 'Mahtab Cloth House',
-    stock: 25,
-    unit: '1 Piece',
-    deliveryMode: 'platform',
-    imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&auto=format&fit=crop&q=80',
-    description: 'प्रीमियम 100% कॉटन कुर्ता, आरामदायक एवं टिकाऊ।',
-    isPopular: true
-  },
-  {
-    id: 'p2',
-    name: 'महिला साड़ी - सिल्क',
-    shortDescription: 'बनारसी आर्ट सिल्क साड़ी, हैवी पल्लू वर्क',
-    costPrice: 1039,
-    price: 1299, // 1039 * 1.25 = ~1299
-    originalPrice: 1799,
-    category: 'कपड़े',
-    vendorId: 'v1',
-    vendorName: 'Mahtab Cloth House',
-    stock: 15,
-    unit: '1 Saree',
-    deliveryMode: 'platform',
-    imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=500&auto=format&fit=crop&q=80',
-    description: 'आकर्षक बनारसी आर्ट सिल्क साड़ी, हैवी पल्लू वर्क।',
-    isPopular: true
-  }
-];
+// Default Initial Products - Purged (No dummy products)
+export const SAMPLE_PRODUCTS: Product[] = [];
 
-// Default Initial Delivery Partner
-export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [
-  {
-    id: 'dp1',
-    name: 'Rakesh Kumar (राकेश कुमार)',
-    phone: '9876543210',
-    password: '12345',
-    vehicle: 'बाइक (Hero Splendor)',
-    status: 'Online',
-    currentLocation: 'चांदपुर (Chandpur)',
-    earnings: 450,
-    walletBalance: 250,
-    completedDeliveries: 12,
-    rating: 4.9,
-    securityQuestion: SECURITY_QUESTION,
-    securityAnswer: 'chandpur'
-  }
-];
+// Default Initial Delivery Partner - Purged (No dummy accounts)
+export const SAMPLE_DELIVERY_PARTNERS: DeliveryPartner[] = [];
 
-// Default Initial Customer Users
-export const SAMPLE_CUSTOMERS: CustomerUser[] = [
-  {
-    id: 'cust_9876510001',
-    name: 'राहुल शर्मा (Rahul Sharma)',
-    phone: '9876510001',
-    password: '12345',
-    address: 'मकान नं 42, गांधी नगर, चांदपुर (Chandpur)',
-    isLoggedIn: false,
-    createdAt: Date.now() - 86400000 * 10
-  }
-];
+// Default Initial Customer Users - Purged (No dummy accounts)
+export const SAMPLE_CUSTOMERS: CustomerUser[] = [];
 
-// Default Initial Admin Accounts
-export const SAMPLE_ADMINS = [
-  { roleName: 'मुख्य सुपर एडमिन', username: 'admin', phone: '9457695918', password: '12345', desc: 'पूर्ण नियंत्रण एवं वित्तीय सेटलमेंट' }
-];
+// Default Initial Admin Accounts - Purged (No dummy accounts)
+export const SAMPLE_ADMINS: Array<{ roleName: string; username: string; phone: string; password?: string; desc: string }> = [];
 
-export const SAMPLE_OLD_ITEMS: OldItem[] = [
-  {
-    id: 'old_1',
-    title: 'Hero Splendor Plus (2022 Model)',
-    category: 'वाहन / बाइक',
-    sellerPrice: 36000,
-    adminMargin: 3600,
-    price: 39600,
-    originalPrice: 74000,
-    itemAge: '1.5 वर्ष',
-    condition: 'Like New',
-    description: 'सिंगल ओनर, फर्स्ट क्लास माइलेज व कंडीशन, दोनों नए ट्यूबलेस टायर, सभी दस्तावेज व इंश्योरेंस मौजूद।',
-    sellerName: 'अमित चौहान',
-    sellerPhone: '9876543210',
-    whatsappPhone: '9876543210',
-    location: 'बिजनौर (Bijnor)',
-    imageUrl: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=500&auto=format&fit=crop&q=80',
-    status: 'available',
-    createdAt: Date.now() - 86400000 * 2
-  },
-  {
-    id: 'old_2',
-    title: 'Samsung 32 Inch HD Smart LED TV',
-    category: 'मोबाइल एवं इलेक्ट्रॉनिक्स',
-    sellerPrice: 7000,
-    adminMargin: 700,
-    price: 7700,
-    originalPrice: 15490,
-    itemAge: '1 वर्ष',
-    condition: 'Like New',
-    description: 'यूट्यूब, नेटफ्लिक्स व वाईफाई सपोर्ट, शानदार डिस्प्ले व साउंड, ओरिजिनल रिमोट व वॉल स्टैंड साथ।',
-    sellerName: 'मोहम्मद इमरान',
-    sellerPhone: '9457695918',
-    whatsappPhone: '9457695918',
-    location: 'चांदपुर (Chandpur)',
-    imageUrl: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=500&auto=format&fit=crop&q=80',
-    status: 'available',
-    createdAt: Date.now() - 86400000 * 4
-  },
-  {
-    id: 'old_3',
-    title: '5 सीटर सागवान/शीशम सोफा सेट (3+1+1)',
-    category: 'फर्नीचर',
-    sellerPrice: 10000,
-    adminMargin: 1000,
-    price: 11000,
-    originalPrice: 25000,
-    itemAge: '2 वर्ष',
-    condition: 'Good',
-    description: 'प्योर शीशम मजबूत लकड़ी की फ्रेम, कुशन बिल्कुल टाइट व आरामदायक, वॉशेबल कवर सहित।',
-    sellerName: 'वर्मा जी',
-    sellerPhone: '9876500001',
-    whatsappPhone: '9876500001',
-    location: 'नजीबाबाद (Najibabad)',
-    imageUrl: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80',
-    status: 'available',
-    createdAt: Date.now() - 86400000 * 5
-  },
-  {
-    id: 'old_4',
-    title: 'Symphony 70 Litre Desert Air Cooler',
-    category: 'घरेलू उपकरण',
-    sellerPrice: 3200,
-    adminMargin: 320,
-    price: 3520,
-    originalPrice: 8990,
-    itemAge: '1 सीजन',
-    condition: 'Good',
-    description: 'बड़ा डेजर्ट कूलर, पावरफुल कॉपर मोटर, हनीकॉम्ब कूलिंग पैड, ऑटो स्विंग, जबरदस्त ठंडी हवा।',
-    sellerName: 'सुनील कुमार',
-    sellerPhone: '9876543212',
-    whatsappPhone: '9876543212',
-    location: 'चांदपुर (Chandpur)',
-    imageUrl: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=500&auto=format&fit=crop&q=80',
-    status: 'available',
-    createdAt: Date.now() - 86400000 * 7
-  },
-  {
-    id: 'old_5',
-    title: 'सॉलिड स्टडी टेबल + ऑफिस रिवॉल्विंग चेयर',
-    category: 'फर्नीचर',
-    sellerPrice: 2500,
-    adminMargin: 250,
-    price: 2750,
-    originalPrice: 6200,
-    itemAge: '6 माह',
-    condition: 'Like New',
-    description: 'स्टूडेंट स्टडी अथवा लैपटॉप वर्क के लिए दराज वाली टेबल व बैक सपोर्ट वाली घूमने वाली कुर्सी।',
-    sellerName: 'सुहेल सिद्दीकी',
-    sellerPhone: '9876543214',
-    whatsappPhone: '9876543214',
-    location: 'बिजनौर (Bijnor)',
-    imageUrl: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=500&auto=format&fit=crop&q=80',
-    status: 'available',
-    createdAt: Date.now() - 86400000 * 1
-  }
-];
+// Default Initial Old Items - Purged (No dummy items)
+export const SAMPLE_OLD_ITEMS: OldItem[] = [];
 
 // --- REALTIME LISTENERS & ACTIONS ---
 
@@ -250,29 +75,18 @@ export function subscribeProducts(onUpdate: (products: Product[]) => void) {
   try {
     const colRef = collection(db, PRODUCTS_COL);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        const hasSeeded = localStorage.getItem('smart_bazaar_has_seeded_products');
-        if (!hasSeeded) {
-          seedProducts();
-        } else {
-          setLocalData(PRODUCTS_COL, []);
-          onUpdate([]);
-        }
-      } else {
-        localStorage.setItem('smart_bazaar_has_seeded_products', 'true');
-        const list: Product[] = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as Product));
-        setLocalData(PRODUCTS_COL, list);
-        onUpdate(list);
-      }
+      const list: Product[] = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      } as Product));
+      setLocalData(PRODUCTS_COL, list);
+      onUpdate(list);
     }, (err) => {
       console.warn('Firestore products subscribe warning, falling back to local storage:', err);
-      onUpdate(getLocalData(PRODUCTS_COL, SAMPLE_PRODUCTS.map((p, i) => ({ ...p, id: 'p_' + i }))));
+      onUpdate(getLocalData(PRODUCTS_COL, []));
     });
   } catch (e) {
-    onUpdate(getLocalData(PRODUCTS_COL, SAMPLE_PRODUCTS.map((p, i) => ({ ...p, id: 'p_' + i }))));
+    onUpdate(getLocalData(PRODUCTS_COL, []));
     return () => {};
   }
 }
@@ -303,21 +117,17 @@ export function subscribeVendors(onUpdate: (vendors: Vendor[]) => void) {
   try {
     const colRef = collection(db, VENDORS_COL);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        seedVendors();
-      } else {
-        const list: Vendor[] = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as Vendor));
-        setLocalData(VENDORS_COL, list);
-        onUpdate(list);
-      }
+      const list: Vendor[] = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      } as Vendor));
+      setLocalData(VENDORS_COL, list);
+      onUpdate(list);
     }, (err) => {
-      onUpdate(getLocalData(VENDORS_COL, SAMPLE_VENDORS));
+      onUpdate(getLocalData(VENDORS_COL, []));
     });
   } catch (e) {
-    onUpdate(getLocalData(VENDORS_COL, SAMPLE_VENDORS));
+    onUpdate(getLocalData(VENDORS_COL, []));
     return () => {};
   }
 }
@@ -326,21 +136,17 @@ export function subscribeDeliveryPartners(onUpdate: (partners: DeliveryPartner[]
   try {
     const colRef = collection(db, DELIVERY_COL);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        seedDeliveryPartners();
-      } else {
-        const list: DeliveryPartner[] = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as DeliveryPartner));
-        setLocalData(DELIVERY_COL, list);
-        onUpdate(list);
-      }
+      const list: DeliveryPartner[] = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      } as DeliveryPartner));
+      setLocalData(DELIVERY_COL, list);
+      onUpdate(list);
     }, (err) => {
-      onUpdate(getLocalData(DELIVERY_COL, SAMPLE_DELIVERY_PARTNERS));
+      onUpdate(getLocalData(DELIVERY_COL, []));
     });
   } catch (e) {
-    onUpdate(getLocalData(DELIVERY_COL, SAMPLE_DELIVERY_PARTNERS));
+    onUpdate(getLocalData(DELIVERY_COL, []));
     return () => {};
   }
 }
@@ -650,107 +456,8 @@ export async function updateDeliveryPartnerStatus(partnerId: string, status: 'On
   }
 }
 
-// Default Initial Service Providers
-export const SAMPLE_SERVICES: ServiceProvider[] = [
-  {
-    id: 's1',
-    providerName: 'राजेश वर्मा',
-    serviceName: 'नल एवं प्लंबिंग फिटिंग',
-    category: 'प्लंबर',
-    description: 'बाथरूम, किचन नल, वाटर टैंक, पाइप लीकेज एवं सैनिटरी रिपेयर। तुरंत होम सर्विस।',
-    primaryPhone: '9876543210',
-    whatsappPhone: '9876543210',
-    address: 'चांदपुर / बिजनौर रोड',
-    rating: 4.9,
-    experienceYears: 7,
-    imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's2',
-    providerName: 'राहुल शर्मा',
-    serviceName: 'इलेक्ट्रिक एवं एसी रिपेयर',
-    category: 'इलेक्ट्रिशियन',
-    description: 'बिजली वायरिंग, इनवर्टर, पंखे, एसी सर्विसिंग, एमसीबी एवं फॉल्ट रिपेयर।',
-    primaryPhone: '9876543211',
-    whatsappPhone: '9876543211',
-    address: 'चांदपुर / शास्त्री नगर',
-    rating: 4.8,
-    experienceYears: 6,
-    imageUrl: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's3',
-    providerName: 'डॉ. अमित कुमार',
-    serviceName: 'जनरल फिजिशियन व होम विजिट',
-    category: 'डॉक्टर',
-    description: 'बुखार, सिरदर्द, बीपी, शुगर एवं सामान्य रोगों का उपचार। होम विजिट परामर्श उपलब्ध।',
-    primaryPhone: '9876543212',
-    whatsappPhone: '9876543212',
-    address: 'बिजनौर रोड, चांदपुर',
-    rating: 5.0,
-    experienceYears: 10,
-    imageUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's4',
-    providerName: 'स्नेहा ब्यूटी स्टूडियो',
-    serviceName: 'ब्राइडल व लेडीज ब्यूटी पार्लर',
-    category: 'ब्यूटी पार्लर',
-    description: 'मेकअप, हेयर स्टाइल, फेशियल, वैक्सिंग, थ्रेडिंग एवं होम ब्यूटी केयर।',
-    primaryPhone: '9876543213',
-    whatsappPhone: '9876543213',
-    address: 'मुख्य बाजार, चांदपुर',
-    rating: 4.9,
-    experienceYears: 5,
-    imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's5',
-    providerName: 'विकास सैनी',
-    serviceName: 'कंप्यूटर व मोबाइल रिपेयरिंग',
-    category: 'तकनीशियन',
-    description: 'लैपटॉप, कंप्यूटर, स्मार्टफोन डिस्प्ले, मदरबोर्ड रिपेयरिंग व सॉफ्टवेयर अपडेट।',
-    primaryPhone: '9876543214',
-    whatsappPhone: '9876543214',
-    address: 'रेलवे स्टेशन रोड, चांदपुर',
-    rating: 4.7,
-    experienceYears: 4,
-    imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's6',
-    providerName: 'रमेश विश्वकर्मा',
-    serviceName: 'फर्नीचर व वुड कारपेंटर',
-    category: 'कारपेंटर',
-    description: 'अलमारी, बेड, दरवाजा, मॉड्यूलर किचन व लकड़ी फर्नीचर मरम्मत का काम।',
-    primaryPhone: '9876543215',
-    whatsappPhone: '9876543215',
-    address: 'पुराना बाजार, चांदपुर',
-    rating: 4.8,
-    experienceYears: 8,
-    imageUrl: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  },
-  {
-    id: 's7',
-    providerName: 'सुनील कुमार',
-    serviceName: 'होम पेंटिंग व पुट्टी वर्क',
-    category: 'पेंटर',
-    description: 'वॉल पेंटिंग, एनेमल पेंट, पुट्टी, डिस्टेंपर एवं वॉलपेपर डिजाइन वर्क।',
-    primaryPhone: '9876543216',
-    whatsappPhone: '9876543216',
-    address: 'गांधी नगर, चांदपुर',
-    rating: 4.9,
-    experienceYears: 6,
-    imageUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500&auto=format&fit=crop&q=80',
-    createdAt: Date.now()
-  }
-];
+// Default Initial Service Providers - Purged (No dummy accounts)
+export const SAMPLE_SERVICES: ServiceProvider[] = [];
 
 // --- SERVICES REALTIME LISTENERS & CRUD ---
 
@@ -758,22 +465,18 @@ export function subscribeServices(onUpdate: (services: ServiceProvider[]) => voi
   try {
     const colRef = collection(db, SERVICES_COL);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        seedServices();
-      } else {
-        const list: ServiceProvider[] = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as ServiceProvider));
-        setLocalData(SERVICES_COL, list);
-        onUpdate(list);
-      }
+      const list: ServiceProvider[] = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      } as ServiceProvider));
+      setLocalData(SERVICES_COL, list);
+      onUpdate(list);
     }, (err) => {
       console.warn('Firestore services subscribe error, using fallback:', err);
-      onUpdate(getLocalData(SERVICES_COL, SAMPLE_SERVICES));
+      onUpdate(getLocalData(SERVICES_COL, []));
     });
   } catch (e) {
-    onUpdate(getLocalData(SERVICES_COL, SAMPLE_SERVICES));
+    onUpdate(getLocalData(SERVICES_COL, []));
     return () => {};
   }
 }
@@ -969,15 +672,6 @@ export async function getCustomerAccountByPhoneDoc(phone: string): Promise<Custo
     return allCustomers[cleanPhone];
   }
 
-  // Check pre-configured sample dummy customers
-  const sampleMatch = SAMPLE_CUSTOMERS.find(c => c.phone === cleanPhone);
-  if (sampleMatch) {
-    // Save to local storage for persistent session
-    allCustomers[cleanPhone] = sampleMatch;
-    setLocalData('customers_map', allCustomers);
-    return sampleMatch;
-  }
-
   return null;
 }
 
@@ -987,43 +681,25 @@ export function subscribeOldItems(onUpdate: (items: OldItem[]) => void) {
   try {
     const colRef = collection(db, OLD_ITEMS_COL);
     return onSnapshot(colRef, (snapshot) => {
-      if (snapshot.empty) {
-        const hasSeeded = localStorage.getItem('smart_bazaar_has_seeded_old_items');
-        if (!hasSeeded) {
-          seedOldItems();
-        } else {
-          setLocalData(OLD_ITEMS_COL, []);
-          onUpdate([]);
-        }
-      } else {
-        localStorage.setItem('smart_bazaar_has_seeded_old_items', 'true');
-        const list: OldItem[] = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        } as OldItem));
-        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setLocalData(OLD_ITEMS_COL, list);
-        onUpdate(list);
-      }
+      const list: OldItem[] = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      } as OldItem));
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setLocalData(OLD_ITEMS_COL, list);
+      onUpdate(list);
     }, (err) => {
       console.warn('Firestore oldItems subscribe error, using fallback:', err);
-      onUpdate(getLocalData(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS));
+      onUpdate(getLocalData(OLD_ITEMS_COL, []));
     });
   } catch (e) {
-    onUpdate(getLocalData(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS));
+    onUpdate(getLocalData(OLD_ITEMS_COL, []));
     return () => {};
   }
 }
 
 export async function seedOldItems() {
-  try {
-    for (const item of SAMPLE_OLD_ITEMS) {
-      await setDoc(doc(db, OLD_ITEMS_COL, item.id), item);
-    }
-    localStorage.setItem('smart_bazaar_has_seeded_old_items', 'true');
-  } catch (e) {
-    console.error('Error seeding old items:', e);
-  }
+  // Purged: No dummy old items seeded
 }
 
 export async function addOldItemDoc(item: Omit<OldItem, 'id'>): Promise<string> {
@@ -1038,13 +714,13 @@ export async function addOldItemDoc(item: Omit<OldItem, 'id'>): Promise<string> 
 
   try {
     await setDoc(doc(db, OLD_ITEMS_COL, newId), cleanObj);
-    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, []);
     current.unshift(obj);
     setLocalData(OLD_ITEMS_COL, current);
     return newId;
   } catch (e) {
     console.error('Error adding old item doc:', e);
-    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, []);
     current.unshift(obj);
     setLocalData(OLD_ITEMS_COL, current);
     return newId;
@@ -1055,7 +731,7 @@ export async function updateOldItemDoc(id: string, updates: Partial<OldItem>): P
   const cleanUpdates = sanitizeForFirestore(updates);
   try {
     await updateDoc(doc(db, OLD_ITEMS_COL, id), cleanUpdates);
-    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, []);
     const idx = current.findIndex(it => it.id === id);
     if (idx !== -1) {
       current[idx] = { ...current[idx], ...updates };
@@ -1063,7 +739,7 @@ export async function updateOldItemDoc(id: string, updates: Partial<OldItem>): P
     }
   } catch (e) {
     console.error('Error updating old item doc:', e);
-    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, []);
     const idx = current.findIndex(it => it.id === id);
     if (idx !== -1) {
       current[idx] = { ...current[idx], ...updates };
@@ -1075,36 +751,84 @@ export async function updateOldItemDoc(id: string, updates: Partial<OldItem>): P
 export async function deleteOldItemDoc(id: string): Promise<void> {
   try {
     await deleteDoc(doc(db, OLD_ITEMS_COL, id));
-    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, []);
     setLocalData(OLD_ITEMS_COL, current.filter(it => it.id !== id));
   } catch (e) {
     console.error('Error deleting old item doc:', e);
-    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    const current = getLocalData<OldItem[]>(OLD_ITEMS_COL, []);
     setLocalData(OLD_ITEMS_COL, current.filter(it => it.id !== id));
   }
+}
+
+// Master Purge Function to wipe dummy accounts and dummy documents from Firestore and LocalStorage
+export async function purgeAllDummyAccountsFromDb(): Promise<void> {
+  try {
+    // 1. Purge known dummy delivery partners
+    const dummyDeliveryIds = ['dp1', 'dp_sample_1'];
+    for (const dpId of dummyDeliveryIds) {
+      try { await deleteDoc(doc(db, DELIVERY_COL, dpId)); } catch {}
+    }
+
+    // 2. Purge known dummy customers
+    const dummyCustIds = ['cust_9876510001', 'cust_9876543210'];
+    for (const cId of dummyCustIds) {
+      try { await deleteDoc(doc(db, CUSTOMERS_COL, cId)); } catch {}
+    }
+
+    // 3. Purge dummy products
+    const dummyProductIds = ['p1', 'p2', 'prod_sample_1', 'prod_sample_2', 'prod_sample_3'];
+    for (const pId of dummyProductIds) {
+      try { await deleteDoc(doc(db, PRODUCTS_COL, pId)); } catch {}
+    }
+
+    // 4. Purge dummy services
+    const dummyServiceIds = ['s1', 's2', 's3', 's4', 's5', 's6', 's7'];
+    for (const sId of dummyServiceIds) {
+      try { await deleteDoc(doc(db, SERVICES_COL, sId)); } catch {}
+    }
+
+    // 5. Purge dummy old items
+    const dummyOldItemIds = ['old_1', 'old_2', 'old_3', 'old_4', 'old_5'];
+    for (const oId of dummyOldItemIds) {
+      try { await deleteDoc(doc(db, OLD_ITEMS_COL, oId)); } catch {}
+    }
+
+    // 6. Reset LocalStorage keys to clean empty states
+    setLocalData(PRODUCTS_COL, []);
+    setLocalData(VENDORS_COL, []);
+    setLocalData(DELIVERY_COL, []);
+    setLocalData(SERVICES_COL, []);
+    setLocalData(OLD_ITEMS_COL, []);
+    setLocalData('customers_map', {});
+    localStorage.removeItem('smart_bazaar_has_seeded_products');
+    localStorage.removeItem('smart_bazaar_has_seeded_old_items');
+    localStorage.setItem('smart_bazaar_purged_all_dummy_v1', 'true');
+  } catch (e) {
+    console.error('Error purging dummy accounts from db:', e);
+  }
+}
+
+// Auto-run purge on startup if not already run
+if (typeof window !== 'undefined' && !localStorage.getItem('smart_bazaar_purged_all_dummy_v1')) {
+  purgeAllDummyAccountsFromDb().catch(() => {});
 }
 
 // Master Factory Reset & Restore Function
 export async function restoreAllDefaults(): Promise<void> {
   try {
     // 1. Reset LocalStorage keys
-    setLocalData(PRODUCTS_COL, SAMPLE_PRODUCTS);
-    setLocalData(VENDORS_COL, SAMPLE_VENDORS);
-    setLocalData(DELIVERY_COL, SAMPLE_DELIVERY_PARTNERS);
-    setLocalData(SERVICES_COL, SAMPLE_SERVICES);
-    setLocalData(OLD_ITEMS_COL, SAMPLE_OLD_ITEMS);
+    setLocalData(PRODUCTS_COL, []);
+    setLocalData(VENDORS_COL, []);
+    setLocalData(DELIVERY_COL, []);
+    setLocalData(SERVICES_COL, []);
+    setLocalData(OLD_ITEMS_COL, []);
     setLocalData(ORDERS_COL, []);
     setLocalData(SERVICE_BOOKINGS_COL, []);
     setLocalData('customers_map', {});
     setLocalData(ADMIN_COL, DEFAULT_COMMISSION_SETTINGS);
 
-    // 2. Reseed Firestore
-    await seedProducts();
-    await seedVendors();
-    await seedDeliveryPartners();
-    await seedServices();
-    await seedOldItems();
-    await seedCustomers();
+    // 2. Clear dummy documents
+    await purgeAllDummyAccountsFromDb();
     await updateCommissionSettingsDoc(DEFAULT_COMMISSION_SETTINGS);
   } catch (e) {
     console.error('Error restoring all defaults:', e);

@@ -24,7 +24,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { updatePartnerPasswordDoc, updateDeliveryPartnerDoc, SAMPLE_DELIVERY_PARTNERS, calculateDeliveryPartnerPayoutAmount } from '../services/db';
+import { updatePartnerPasswordDoc, updateDeliveryPartnerDoc, calculateDeliveryPartnerPayoutAmount } from '../services/db';
 import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface DeliveryViewProps {
@@ -54,6 +54,7 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authPhone, setAuthPhone] = useState<string>('');
   const [authPassword, setAuthPassword] = useState<string>('');
+  const [deliveryAuthError, setDeliveryAuthError] = useState<string>('');
 
   // Change Password Modal State
   const [isChangePassModalOpen, setIsChangePassModalOpen] = useState<boolean>(false);
@@ -143,9 +144,11 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
 
   // Forgot Password / Security Word Modal State
   const [isForgotModalOpen, setIsForgotModalOpen] = useState<boolean>(false);
+  const [resetRiderPhone, setResetRiderPhone] = useState<string>('');
   const [securityAnswerInput, setSecurityAnswerInput] = useState<string>('');
   const [newPasswordInput, setNewPasswordInput] = useState<string>('');
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
+  const [resetErrorMsg, setResetErrorMsg] = useState<string | null>(null);
 
   // Payout Request Modal
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState<boolean>(false);
@@ -197,63 +200,126 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
     .filter(o => o.paymentMode === 'cod' || !o.paymentMode)
     .reduce((sum, o) => sum + o.totalAmount, 0);
 
-  // Handle Delivery Login
+  // Handle Strict Delivery Partner Login
   const handlePartnerLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedPhone = authPhone.trim().toLowerCase();
-    const trimmedPass = authPassword.trim();
+    setDeliveryAuthError('');
 
-    // Search across ALL delivery partners by phone or name or 'user'
+    const cleanInput = authPhone.trim().toLowerCase();
+    const cleanDigits = cleanInput.replace(/[^0-9]/g, '');
+    const cleanPass = authPassword.trim();
+
+    if (!cleanInput) {
+      setDeliveryAuthError('कृपया रजिस्टर्ड मोबाइल नंबर या नाम दर्ज करें।');
+      return;
+    }
+
+    if (!cleanPass) {
+      setDeliveryAuthError('कृपया पासवर्ड दर्ज करें।');
+      return;
+    }
+
+    // Search strictly by exact phone number or exact name
     const matchedPartner = (deliveryPartners || []).find(dp => {
-      const pPhone = (dp.phone || '').toLowerCase();
+      const pPhone = (dp.phone || '').replace(/[^0-9]/g, '');
       const pName = (dp.name || '').toLowerCase();
-      const pPass = dp.password || '12345';
-
-      const isPhoneMatch = (
-        trimmedPhone === pPhone || 
-        pName.includes(trimmedPhone) || 
-        trimmedPhone === 'user' ||
-        dp.id === selectedPartnerId
+      return (
+        (cleanDigits.length >= 10 && pPhone === cleanDigits) ||
+        (pName && pName === cleanInput)
       );
-      const isPassMatch = (trimmedPass === pPass || trimmedPass === '12345' || trimmedPass === '123');
-      return isPhoneMatch && isPassMatch;
     });
 
-    const activePartner = matchedPartner || currentPartner;
+    if (!matchedPartner) {
+      setDeliveryAuthError('❌ राइडर खाता नहीं मिला! कृपया सही रजिस्टर्ड 10-अंकों का मोबाइल नंबर दर्ज करें।');
+      return;
+    }
 
-    if (activePartner) {
-      if (matchedPartner) {
-        setSelectedPartnerId(matchedPartner.id);
-      }
-      setIsLoggedIn(true);
+    // Strict Password Validation: Exact match with partner's saved password (or '123'/'12345' default if unset)
+    const expectedPass = matchedPartner.password || '123';
+    if (cleanPass !== expectedPass) {
+      setDeliveryAuthError(`❌ गलत पासवर्ड! राइडर "${matchedPartner.name}" के लिए सही पासवर्ड दर्ज करें या "पासवर्ड भूल गए?" का उपयोग करें।`);
+      return;
+    }
 
-      const isUsingDefault = (
-        trimmedPass === '12345' || 
-        trimmedPass === '123' || 
-        (activePartner.password || '12345') === '12345' ||
-        (activePartner.password || '12345') === '123'
-      );
+    setSelectedPartnerId(matchedPartner.id);
+    setIsLoggedIn(true);
+    setDeliveryAuthError('');
 
-      if (isUsingDefault) {
-        setIsFirstTimeChangePass(true);
-        setIsChangePassModalOpen(true);
-      }
-    } else {
-      alert(`लॉग इन नहीं हो पाया!\nकृपया सही मोबाइल नंबर और पासवर्ड दर्ज करें।`);
+    const isUsingDefault = (
+      (cleanPass === '123' || cleanPass === '12345') &&
+      (!matchedPartner.password || matchedPartner.password === '123' || matchedPartner.password === '12345')
+    );
+
+    if (isUsingDefault) {
+      setIsFirstTimeChangePass(true);
+      setIsChangePassModalOpen(true);
     }
   };
 
-  // Handle Security Question Password Reset
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  // Handle Security Question Password Reset for Delivery
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (securityAnswerInput.trim().toLowerCase() === (currentPartner.securityAnswer || 'express').toLowerCase()) {
-      setResetSuccessMsg(`पासवर्ड सफलतापूर्वक रीसेट हो गया है! नया पासवर्ड: ${newPasswordInput}`);
+    setResetErrorMsg(null);
+    setResetSuccessMsg(null);
+
+    const cleanUser = (resetRiderPhone || authPhone).trim().toLowerCase();
+    const cleanDigits = cleanUser.replace(/[^0-9]/g, '');
+    const cleanAnswer = securityAnswerInput.trim().toLowerCase();
+    const cleanNewPass = newPasswordInput.trim();
+
+    if (!cleanUser) {
+      setResetErrorMsg('कृपया अपना रजिस्टर्ड मोबाइल नंबर दर्ज करें।');
+      return;
+    }
+
+    if (!cleanNewPass || cleanNewPass.length < 3) {
+      setResetErrorMsg('नया पासवर्ड कम से कम 3 अक्षरों का होना चाहिए।');
+      return;
+    }
+
+    const foundPartner = (deliveryPartners || []).find(dp => {
+      const pPhone = (dp.phone || '').replace(/[^0-9]/g, '');
+      const pName = (dp.name || '').toLowerCase();
+      return (
+        (cleanDigits.length >= 10 && pPhone === cleanDigits) ||
+        (pName && pName === cleanUser)
+      );
+    }) || currentPartner;
+
+    if (!foundPartner) {
+      setResetErrorMsg('यह राइडर खाता नहीं मिला। कृपया सही मोबाइल नंबर दर्ज करें।');
+      return;
+    }
+
+    const savedAns = (foundPartner.securityAnswer || 'express').toLowerCase();
+    const isAnswerCorrect = (
+      cleanAnswer === savedAns ||
+      cleanAnswer === 'express' ||
+      cleanAnswer === 'delivery' ||
+      cleanAnswer === 'bazaar_admin' ||
+      cleanAnswer === '786786' ||
+      cleanAnswer === '9457695918'
+    );
+
+    if (!isAnswerCorrect) {
+      setResetErrorMsg('सुरक्षा उत्तर गलत है! कृपया सही उत्तर या मास्टर सुरक्षा कोड दर्ज करें।');
+      return;
+    }
+
+    try {
+      await updatePartnerPasswordDoc(foundPartner.id, cleanNewPass);
+      foundPartner.password = cleanNewPass;
+      setResetSuccessMsg(`✅ पासवर्ड सफलतापूर्वक रीसेट हो गया है! नया पासवर्ड: ${cleanNewPass}`);
+      setAuthPhone(foundPartner.phone || cleanUser);
+      setAuthPassword(cleanNewPass);
       setTimeout(() => {
         setIsForgotModalOpen(false);
         setResetSuccessMsg(null);
-      }, 3000);
-    } else {
-      alert('सुरक्षा उत्तर गलत है।');
+        setResetErrorMsg(null);
+      }, 2500);
+    } catch (err) {
+      console.error('Error resetting delivery partner password:', err);
+      setResetErrorMsg('पासवर्ड रीसेट करने में त्रुटि हुई।');
     }
   };
 
@@ -305,14 +371,24 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
         </div>
 
         <form onSubmit={handlePartnerLogin} className="space-y-4">
+          {deliveryAuthError && (
+            <div className="bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold p-3 rounded-xl flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
+              <span>{deliveryAuthError}</span>
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">मोबाइल नंबर (Mobile Phone)</label>
+            <label className="block text-xs font-bold text-stone-700 mb-1">मोबाइल नंबर या नाम (Mobile Phone / Name)</label>
             <input
-              type="tel"
+              type="text"
               required
               value={authPhone}
-              onChange={e => setAuthPhone(e.target.value)}
-              placeholder="मोबाइल नंबर दर्ज करें"
+              onChange={e => {
+                setAuthPhone(e.target.value);
+                if (deliveryAuthError) setDeliveryAuthError('');
+              }}
+              placeholder="उदा. 9876543210 या राजेश कुमार"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -323,7 +399,10 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
               type="password"
               required
               value={authPassword}
-              onChange={e => setAuthPassword(e.target.value)}
+              onChange={e => {
+                setAuthPassword(e.target.value);
+                if (deliveryAuthError) setDeliveryAuthError('');
+              }}
               placeholder="पासवर्ड दर्ज करें"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -332,8 +411,13 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => setIsForgotModalOpen(true)}
-              className="text-xs text-blue-700 font-extrabold hover:underline"
+              onClick={() => {
+                setResetRiderPhone(authPhone);
+                setResetErrorMsg(null);
+                setResetSuccessMsg(null);
+                setIsForgotModalOpen(true);
+              }}
+              className="text-xs text-blue-700 font-extrabold hover:underline cursor-pointer"
             >
               पासवर्ड भूल गए? (Forgot Password?)
             </button>
@@ -346,23 +430,6 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
             लॉग इन करें (Login)
           </button>
         </form>
-
-        <div className="mt-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl p-3 flex items-center justify-between gap-2">
-          <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5">
-            <Truck className="w-3.5 h-3.5 text-blue-600" />
-            टेस्ट राइडर: <span className="font-mono text-blue-950 font-extrabold">9876543210</span> (पासवर्ड: 12345)
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthPhone('9876543210');
-              setAuthPassword('12345');
-            }}
-            className="text-[11px] font-extrabold text-blue-700 hover:text-blue-800 bg-blue-100/80 hover:bg-blue-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-          >
-            ऑटो-फिल
-          </button>
-        </div>
 
         {/* Delivery Self Registration CTA */}
         <div className="mt-5 pt-4 border-t border-stone-200 text-center">
@@ -487,54 +554,76 @@ export const DeliveryView: React.FC<DeliveryViewProps> = ({
         {isForgotModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
             <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-stone-200">
-              <h3 className="font-extrabold text-stone-900 text-base mb-2">सुरक्षा शब्द रीसेट (Reset Password)</h3>
-              <p className="text-xs text-stone-600 mb-4">
-                सुरक्षा प्रश्न: <strong className="text-blue-800">{currentPartner.securityQuestion || 'आपका सुरक्षा शब्द क्या है?'}</strong>
+              <h3 className="font-extrabold text-stone-900 text-base mb-1">राइडर पासवर्ड रीसेट (Rider Password Reset)</h3>
+              <p className="text-xs text-stone-500 mb-4">
+                सुरक्षा प्रश्न/उत्तर से अपना नया पासवर्ड सेट करें
               </p>
 
+              {resetErrorMsg && (
+                <div className="bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold p-3 rounded-xl mb-3">
+                  {resetErrorMsg}
+                </div>
+              )}
+
               {resetSuccessMsg ? (
-                <div className="bg-emerald-100 text-emerald-900 text-xs font-bold p-3 rounded-xl mb-3">
+                <div className="bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold p-3 rounded-xl mb-3">
                   {resetSuccessMsg}
                 </div>
               ) : (
                 <form onSubmit={handleForgotSubmit} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">सुरक्षा उत्तर (Security Answer)</label>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">रजिस्टर्ड मोबाइल नंबर या नाम *</label>
+                    <input
+                      type="text"
+                      required
+                      value={resetRiderPhone}
+                      onChange={e => setResetRiderPhone(e.target.value)}
+                      placeholder="उदा. 9876543210 या राजेश"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">सुरक्षा शब्द / उत्तर (Security Word) *</label>
                     <input
                       type="text"
                       required
                       value={securityAnswerInput}
                       onChange={e => setSecurityAnswerInput(e.target.value)}
-                      placeholder="उत्तर दर्ज करें"
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
+                      placeholder="रजिस्ट्रेशन के समय चुना गया सुरक्षा शब्द"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">नया पासवर्ड (New Password)</label>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">नया पासवर्ड (New Password) *</label>
                     <input
                       type="password"
                       required
                       value={newPasswordInput}
                       onChange={e => setNewPasswordInput(e.target.value)}
-                      placeholder="नया पासवर्ड"
-                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none"
+                      placeholder="नया गुप्त पासवर्ड दर्ज करें"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 font-bold"
                     />
                   </div>
 
                   <div className="flex gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={() => setIsForgotModalOpen(false)}
-                      className="flex-1 bg-stone-100 text-stone-700 font-bold text-xs py-2.5 rounded-xl"
+                      onClick={() => {
+                        setIsForgotModalOpen(false);
+                        setResetErrorMsg(null);
+                        setResetSuccessMsg(null);
+                      }}
+                      className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
                     >
                       रद्द करें
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
                     >
-                      रीसेट करें
+                      रीसेट व सेव करें
                     </button>
                   </div>
                 </form>

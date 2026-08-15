@@ -23,7 +23,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { updateVendorPasswordDoc, updateVendorDoc, SAMPLE_VENDORS } from '../services/db';
+import { updateVendorPasswordDoc, updateVendorDoc } from '../services/db';
 import { ServicesPanel } from './ServicesPanel';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { Product3DIcon } from './Product3DIcon';
@@ -193,18 +193,18 @@ export const VendorView: React.FC<VendorViewProps> = ({
   const [deletingProdId, setDeletingProdId] = useState<string | null>(null);
 
   const currentVendor = (vendors || []).find(v => v.id === selectedVendorId) || (vendors || [])[0] || {
-    id: 'v1',
-    shopName: 'Mahtab Cloth House',
-    ownerName: 'Mehtab Khan',
-    phone: '9457695918',
-    category: 'Cloth House',
+    id: '',
+    shopName: 'मेरी दुकान',
+    ownerName: 'दुकानदार',
+    phone: '',
+    category: 'General Store',
     status: 'active',
-    address: 'Bijnor Market',
-    rating: 4.9,
-    username: 'mehtab',
-    password: '123',
+    address: 'बाज़ार',
+    rating: 5.0,
+    username: '',
+    password: '',
     securityQuestion: 'आपका सुरक्षा शब्द क्या है?',
-    securityAnswer: 'cloth'
+    securityAnswer: ''
   };
 
   // Vendor specific products
@@ -512,7 +512,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
                 setAuthUsername(e.target.value);
                 if (vendorAuthError) setVendorAuthError('');
               }}
-              placeholder="उदा. mahtab या 9876500001"
+              placeholder="यूज़रनेम या 10-अंकीय मोबाइल नंबर"
               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
@@ -554,23 +554,6 @@ export const VendorView: React.FC<VendorViewProps> = ({
             लॉग इन करें (Login)
           </button>
         </form>
-
-        <div className="mt-4 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-3 flex items-center justify-between gap-2">
-          <span className="text-[11px] font-bold text-stone-600 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            टेस्ट वेंडर: <span className="font-mono text-emerald-900 font-extrabold">mahtab</span> (पासवर्ड: 12345)
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthUsername('mahtab');
-              setAuthPassword('12345');
-            }}
-            className="text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-          >
-            ऑटो-फिल
-          </button>
-        </div>
 
         {/* Self Registration CTA Banner */}
         <div className="mt-5 pt-4 border-t border-stone-200 text-center">
@@ -790,7 +773,7 @@ export const VendorView: React.FC<VendorViewProps> = ({
                       required
                       value={resetUsername}
                       onChange={e => setResetUsername(e.target.value)}
-                      placeholder="उदा. mahtab या 9876500001"
+                      placeholder="यूज़रनेम या 10-अंकीय मोबाइल नंबर"
                       className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                     />
                   </div>

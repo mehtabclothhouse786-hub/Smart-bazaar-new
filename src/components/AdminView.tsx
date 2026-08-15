@@ -180,7 +180,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         setIsVerifiedForReset(true);
         setForgotError('');
       } else {
-        setForgotError('गलत सुरक्षा शब्द! कृपया अपना सही सुरक्षा शब्द दर्ज करें (उदा. bazaar_admin, mehtab, bijnor या मास्टर पिन)।');
+        setForgotError('गलत सुरक्षा शब्द! कृपया अपना सही सुरक्षा शब्द या मास्टर पिन दर्ज करें।');
       }
     } else if (forgotRecoveryMethod === 'master_pin') {
       const pin = forgotMasterPinInput.trim();
@@ -625,8 +625,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-between pt-0.5">
-            <span className="text-[11px] text-stone-500 font-medium">डिफ़ॉल्ट पासवर्ड: 12345</span>
+          <div className="flex items-center justify-end pt-0.5">
             <button
               type="button"
               onClick={handleOpenForgotModal}
@@ -651,23 +650,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <span>एडमिन लॉग इन करें (Admin Login)</span>
           </button>
         </form>
-
-        <div className="mt-4 bg-stone-100 border border-stone-300 rounded-2xl p-3 flex items-center justify-between gap-2">
-          <span className="text-[11px] font-bold text-stone-700 flex items-center gap-1.5">
-            <Key className="w-3.5 h-3.5 text-amber-600" />
-            टेस्ट एडमिन: <span className="font-mono text-stone-900 font-extrabold">admin</span> (पासवर्ड: 12345)
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setAdminUsername('admin');
-              setAdminPassword('12345');
-            }}
-            className="text-[11px] font-extrabold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-          >
-            ऑटो-फिल
-          </button>
-        </div>
 
         {/* Admin Forgot Password Modal */}
         {isAdminForgotModalOpen && (
@@ -817,11 +799,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
                               required
                               value={forgotSecAnswerInput}
                               onChange={e => setForgotSecAnswerInput(e.target.value)}
-                              placeholder="सुरक्षा शब्द दर्ज करें (उदा: bazaar_admin या mehtab)"
+                              placeholder="सुरक्षा शब्द दर्ज करें (उदा: bazaar_admin)"
                               className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500"
                             />
                             <p className="text-[10px] text-stone-400 mt-1">
-                              💡 डिफ़ॉल्ट सुरक्षा शब्द: <span className="font-mono font-bold text-stone-600">bazaar_admin</span> या <span className="font-mono font-bold text-stone-600">mehtab</span> या <span className="font-mono font-bold text-stone-600">9457695918</span>
+                              💡 डिफ़ॉल्ट सुरक्षा शब्द: <span className="font-mono font-bold text-stone-600">bazaar_admin</span> या मास्टर पिन <span className="font-mono font-bold text-stone-600">786786</span>
                             </p>
                           </div>
                         </div>
@@ -1823,7 +1805,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       type="text"
                       value={vUsername}
                       onChange={e => setVUsername(e.target.value)}
-                      placeholder="उदा. mahtab"
+                      placeholder="उदा. shop_username"
                       className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs"
                     />
                   </div>

@@ -6,6 +6,7 @@ export interface CustomerUser {
   phone: string;
   password?: string;
   address?: string;
+  profilePicture?: string;
   isLoggedIn: boolean;
   createdAt?: number;
 }

@@ -130,9 +130,17 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       onClick={onOpenCustomerPanel}
                       title="खाता विवरण एवं ऑर्डर इतिहास (My Account)"
-                      className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 px-3 py-1.5 rounded-full text-xs font-extrabold shadow-xs transition-all active:scale-95 cursor-pointer"
+                      className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-extrabold shadow-xs transition-all active:scale-95 cursor-pointer"
                     >
-                      <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      {customerUser.profilePicture ? (
+                        <img
+                          src={customerUser.profilePicture}
+                          alt={customerUser.name}
+                          className="w-5 h-5 rounded-full object-cover border border-emerald-500 shrink-0"
+                        />
+                      ) : (
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      )}
                       <span className="max-w-[90px] sm:max-w-[130px] truncate">{customerUser.name}</span>
                     </button>
                     {onCustomerLogout && (

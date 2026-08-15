@@ -34,6 +34,8 @@ import { OldItemsPanel } from './OldItemsPanel';
 import { shareProductToWhatsApp } from '../utils/whatsappShare';
 import { Product3DIcon } from './Product3DIcon';
 import { ALL_SHOP_CATEGORIES, getCategoryPhoto } from '../utils/categoryData';
+import { PredictiveSearchBar } from './PredictiveSearchBar';
+import { HighlightMatch } from './HighlightMatch';
 
 interface CustomerViewProps {
   products: Product[];
@@ -140,6 +142,13 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       if (customerUser.phone) setCustomerPhone(customerUser.phone);
     }
   }, [customerUser]);
+
+  // Sync external searchQuery if passed from parent
+  React.useEffect(() => {
+    if (searchQuery !== undefined && searchQuery !== shopSearchQuery) {
+      setShopSearchQuery(searchQuery);
+    }
+  }, [searchQuery]);
 
   // Sync external isCartOpen with local modal state
   React.useEffect(() => {
@@ -346,17 +355,61 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 </div>
               </div>
 
-              {/* Shop Search Bar */}
-              <div className="relative mb-4">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                <input
-                  type="text"
+              {/* Predictive Search Bar with Auto-complete & Real-time Suggestions */}
+              <div className="mb-5">
+                <PredictiveSearchBar
                   value={shopSearchQuery}
-                  onChange={(e) => setShopSearchQuery(e.target.value)}
-                  placeholder="खोजें (दुकान का नाम, सामान, राशन, कपड़ा, हार्डवेयर)..."
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-stone-200 rounded-full text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-none shadow-xs"
+                  onChange={setShopSearchQuery}
+                  products={products}
+                  vendors={vendors}
+                  onSelectProduct={(product) => {
+                    const vendor = vendors.find(v => v.id === product.vendorId || v.shopName === product.vendorName);
+                    if (vendor) {
+                      setSelectedVendorId(vendor.id);
+                      setCustomerShopView('catalog');
+                    }
+                  }}
+                  onSelectCategory={(category) => {
+                    setSelectedShopCategory(category);
+                  }}
+                  onSelectVendor={(vendor) => {
+                    setSelectedVendorId(vendor.id);
+                    setCustomerShopView('catalog');
+                  }}
+                  onAddToCart={(product) => {
+                    guardAction(() => onAddToCart(product), 'कार्ट में प्रोडक्ट जोड़ने के लिए लॉगिन करें');
+                  }}
+                  placeholder="सामान, दुकान का नाम, राशन, कपड़ा, इलेक्ट्रॉनिक्स या कैटेगरी खोजें..."
                 />
               </div>
+
+              {/* Active Search Filter Badge */}
+              {shopSearchQuery.trim() && (
+                <div className="mb-4 flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-950">
+                    <Search className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>सर्च परिणाम:</span>
+                    <span className="bg-emerald-800 text-white px-2 py-0.5 rounded-lg font-black">
+                      "{shopSearchQuery}"
+                    </span>
+                    {selectedShopCategory !== 'सभी' && (
+                      <span className="text-[11px] text-emerald-800 font-semibold">
+                        (श्रेणी: {selectedShopCategory})
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShopSearchQuery('');
+                      setSelectedShopCategory('सभी');
+                    }}
+                    className="text-xs font-extrabold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>सर्च हटाएं</span>
+                  </button>
+                </div>
+              )}
 
               {/* Visual Category Showcase Cards */}
               <div className="mb-6">
@@ -411,6 +464,148 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                   })}
                 </div>
               </div>
+
+              {/* LIVE MATCHED PRODUCTS WHEN SEARCHING */}
+              {(() => {
+                const q = shopSearchQuery.trim().toLowerCase();
+                if (!q) return null;
+
+                const liveMatchedProducts = products.filter(p => {
+                  // Category filter if active
+                  if (selectedShopCategory !== 'सभी') {
+                    const selCat = selectedShopCategory.toLowerCase();
+                    const pCat = (p.category || '').toLowerCase();
+                    const vendor = vendors.find(v => v.id === p.vendorId || v.shopName === p.vendorName);
+                    const vCat = (vendor?.category || '').toLowerCase();
+                    if (!pCat.includes(selCat) && !vCat.includes(selCat)) return false;
+                  }
+
+                  const nameMatch = p.name.toLowerCase().includes(q);
+                  const catMatch = (p.category || '').toLowerCase().includes(q);
+                  const descMatch = (p.description || '').toLowerCase().includes(q) || (p.shortDescription || '').toLowerCase().includes(q);
+                  const vNameMatch = (p.vendorName || '').toLowerCase().includes(q);
+                  const vendor = vendors.find(v => v.id === p.vendorId || v.shopName === p.vendorName);
+                  const vCatMatch = (vendor?.category || '').toLowerCase().includes(q);
+                  return nameMatch || catMatch || descMatch || vNameMatch || vCatMatch;
+                });
+
+                if (liveMatchedProducts.length === 0) return null;
+
+                return (
+                  <div className="mb-8">
+                    <div className="flex items-center justify-between mb-3.5">
+                      <h2 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
+                        <span className="w-2 h-5 bg-amber-500 rounded-full inline-block" />
+                        <span>🎯 खोजे गए प्रोडक्ट्स ({liveMatchedProducts.length} उपलब्ध)</span>
+                      </h2>
+                      <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                        सीधा ऑर्डर करें
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {liveMatchedProducts.map(product => {
+                        const cartItem = (cart || []).find(ci => ci?.product?.id === product.id);
+                        const vendor = vendors.find(v => v.id === product.vendorId || v.shopName === product.vendorName);
+                        const vendorCategory = vendor?.category || product.category || 'General';
+
+                        return (
+                          <div
+                            key={product.id}
+                            className="bg-white border-2 border-emerald-300 rounded-3xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                          >
+                            <div className="flex gap-3.5">
+                              <img
+                                src={product.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=500'}
+                                alt={product.name}
+                                className="w-20 h-20 rounded-2xl object-cover bg-stone-100 shrink-0 border border-stone-200"
+                              />
+
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-extrabold text-stone-900 text-sm leading-snug line-clamp-2">
+                                  <HighlightMatch text={product.name} query={shopSearchQuery} />
+                                </h3>
+
+                                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200">
+                                    <HighlightMatch text={vendorCategory} query={shopSearchQuery} />
+                                  </span>
+                                  <span className="text-[11px] text-stone-500 truncate font-medium">
+                                    🏪 <HighlightMatch text={product.vendorName} query={shopSearchQuery} />
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <span className="font-extrabold text-emerald-800 text-base">
+                                    ₹{product.price}
+                                  </span>
+                                  {product.originalPrice && product.originalPrice > product.price && (
+                                    <span className="text-xs text-stone-400 line-through">
+                                      ₹{product.originalPrice}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2">
+                              {cartItem ? (
+                                <div className="inline-flex items-center bg-emerald-50 border border-emerald-300 rounded-xl overflow-hidden">
+                                  <button
+                                    onClick={() => guardAction(() => onUpdateCartQty(product.id, -1), 'कार्ट में बदलाव करने के लिए लॉगिन करें')}
+                                    className="px-2.5 py-1 text-emerald-800 font-extrabold hover:bg-emerald-200"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="px-2.5 font-extrabold text-xs text-emerald-950">
+                                    {cartItem.quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => guardAction(() => onUpdateCartQty(product.id, 1), 'कार्ट में बदलाव करने के लिए लॉगिन करें')}
+                                    className="px-2.5 py-1 text-emerald-800 font-extrabold hover:bg-emerald-200"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => guardAction(() => onAddToCart(product), 'कार्ट में प्रोडक्ट जोड़ने के लिए लॉगिन करें')}
+                                    className="bg-amber-400 hover:bg-amber-500 text-stone-950 font-extrabold text-xs px-2.5 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+                                  >
+                                    कार्ट में जोड़ें
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      guardAction(() => {
+                                        onAddToCart(product);
+                                        setIsCheckoutModalOpen(true);
+                                      }, 'प्रोडक्ट ऑर्डर करने के लिए लॉगिन करें');
+                                    }}
+                                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-2.5 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+                                  >
+                                    अभी बुक करें
+                                  </button>
+                                </div>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => shareProductToWhatsApp(product)}
+                                className="px-2.5 py-1.5 bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] font-bold text-[11px] rounded-xl border border-[#25D366]/40 transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                                title="व्हाट्सएप स्टेटस पर शेयर करें"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                                <span>WhatsApp</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-extrabold text-stone-900 flex items-center gap-2">
@@ -481,10 +676,10 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
 
                       <div className="flex-1 min-w-0">
                         <h3 className="font-extrabold text-stone-900 text-base leading-snug truncate">
-                          {v.shopName}
+                          <HighlightMatch text={v.shopName} query={shopSearchQuery} />
                         </h3>
                         <p className="text-xs text-stone-500 font-medium truncate mt-0.5">
-                          {categories.length > 0 ? categories.join(', ') : v.category}
+                          <HighlightMatch text={categories.length > 0 ? categories.join(', ') : v.category} query={shopSearchQuery} />
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
@@ -540,7 +735,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                     <h2 className="font-black text-stone-900 text-base sm:text-lg leading-tight flex items-center gap-2">
                       <span>{selectedVendor ? selectedVendor.shopName : 'दुकान कैटलॉग'}</span>
                       <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full">
-                        {selectedVendor?.category || 'General'}
+                        <HighlightMatch text={selectedVendor?.category || 'General'} query={shopSearchQuery} />
                       </span>
                     </h2>
                     <p className="text-xs text-stone-500 font-medium mt-0.5">
@@ -555,10 +750,35 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                 </div>
               </div>
 
+              {/* Single Vendor Catalog Search Bar */}
+              <div className="mb-5">
+                <PredictiveSearchBar
+                  value={shopSearchQuery}
+                  onChange={setShopSearchQuery}
+                  products={products.filter(p => p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName)}
+                  vendors={selectedVendor ? [selectedVendor] : []}
+                  onSelectProduct={(product) => {
+                    // product is in current vendor
+                  }}
+                  onAddToCart={(product) => {
+                    guardAction(() => onAddToCart(product), 'कार्ट में प्रोडक्ट जोड़ने के लिए लॉगिन करें');
+                  }}
+                  placeholder={`इस दुकान में सामान या कैटेगरी खोजें (${selectedVendor?.shopName || ''})...`}
+                />
+              </div>
+
               {/* Products in this vendor's catalog */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {products
                   .filter(p => p.vendorId === selectedVendorId || p.vendorName === selectedVendor?.shopName)
+                  .filter(p => {
+                    if (!shopSearchQuery.trim()) return true;
+                    const q = shopSearchQuery.toLowerCase().trim();
+                    return p.name.toLowerCase().includes(q) ||
+                           (p.category && p.category.toLowerCase().includes(q)) ||
+                           (p.description && p.description.toLowerCase().includes(q)) ||
+                           (p.shortDescription && p.shortDescription.toLowerCase().includes(q));
+                  })
                   .map(product => {
                     const cartItem = (cart || []).find(ci => ci?.product?.id === product.id);
                     return (
@@ -575,7 +795,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                         <div className="flex-1 min-w-0 flex flex-col justify-between">
                           <div>
                             <h3 className="font-extrabold text-stone-900 text-sm leading-snug line-clamp-1">
-                              {product.name}
+                              <HighlightMatch text={product.name} query={shopSearchQuery} />
                             </h3>
                             {(product.shortDescription || product.description) && (
                               <p className="text-[11px] text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold inline-block mt-0.5 line-clamp-1 border border-emerald-100">
@@ -583,7 +803,7 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                               </p>
                             )}
                             <p className="text-xs text-stone-500 line-clamp-1 font-medium mt-0.5">
-                              विक्रेता: {product.vendorName}
+                              श्रेणी: <HighlightMatch text={product.category || 'General'} query={shopSearchQuery} />
                             </p>
                             
                             <div className="flex items-center gap-2 mt-1">
