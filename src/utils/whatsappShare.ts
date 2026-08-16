@@ -38,7 +38,7 @@ async function fetchImageAsFile(imageUrl: string, filename: string): Promise<Fil
   }
 }
 
-export const APP_SHARE_URL = 'https://smartbazaars.netlify.app/';
+export const APP_SHARE_URL = 'https://bit.ly/4fWoCXK';
 
 export async function shareProductToWhatsApp(product: Product): Promise<void> {
   const priceText = `₹${product.price}${product.unit ? ` / ${product.unit}` : ''}`;
